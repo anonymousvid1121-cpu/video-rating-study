@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
 <style>
 /* Layout: an evaluation bench. Sentence strip on top (English | Korean, start and target states highlighted), the reference centred,
-   A and B side by side, each with a shared time bar and its own two rating rails.
+   A and B side by side, each with a shared time bar and its own two rating rails. One interface language at a time (Korean by default).
    Phone (<=760px): the reference stays on top and A / B are shown one at a time under tabs; the Back / Next bar sticks to the bottom. */
 :root{
   --bg:#eef0ee; --surface:#ffffff; --ink:#1a1d1b; --mute:#5c625e; --line:#d5d9d5;
@@ -30,16 +30,22 @@
   --accent:#86a6ff; --accent-ink:#0c1328; --accent-soft:#25304d; --warn:#f09468; --stage:#000000;
   --sa:#5a3c16; --sb:#1d3a5f; color-scheme:dark}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans);
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 0}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 0}
 main{max-width:1180px;margin:0 auto;display:grid;gap:18px;padding-bottom:28px}
+[data-lang="ko"] .l-en,[data-lang="en"] .l-ko{display:none!important}
 h1,h2{font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
 h1{font-size:26px}h2{font-size:21px}
 p{margin:0}
-.ko{color:var(--mute)}
+.muted{color:var(--mute)}
 .stack{display:grid;gap:10px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
 .lede{max-width:68ch;display:grid;gap:12px}
+.lede .first{font-size:17px;font-weight:500}
+.langbar{display:flex;justify-content:flex-end}
+.lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface)}
+.lang button{font:inherit;font-size:13px;padding:5px 14px;border:0;background:transparent;color:var(--mute);cursor:pointer;touch-action:manipulation}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .qcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:12px}
 .qcard h3,.raffle h3{margin:0 0 4px;font-size:16px;font-weight:600}
 .raffle{background:var(--accent-soft);border-color:var(--accent-soft)}
@@ -51,7 +57,7 @@ p{margin:0}
 .btn{display:inline-block;text-decoration:none;font:inherit;font-weight:600;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px 18px;cursor:pointer;touch-action:manipulation}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
-.btn:focus-visible,.tabs button:focus-visible,.ctl button:focus-visible,.ctl input:focus-visible,.scale input:focus-visible+label,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn:focus-visible,.lang button:focus-visible,.tabs button:focus-visible,.ctl button:focus-visible,.ctl input:focus-visible,.scale input:focus-visible+label,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .small{font-size:13px}
 .mobile-only{display:none}
@@ -109,7 +115,7 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
   .ptxt p + p{border-left:0;padding-left:0;margin-left:0}
 }
 @media (max-width:760px){
-  body{padding-block:12px 0}
+  body{padding-block:10px 0}
   main{gap:12px}
   h1{font-size:22px}
   .panel{padding:12px 14px}
@@ -130,114 +136,118 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
 </style>
 </head>
 <body>
-<main>
+<main id="app" data-lang="ko">
   <div class="draft" id="draftNote" hidden>DRAFT preview. Answers stay in this browser only. <button type="button" id="resetBtn">Reset</button></div>
+  <div class="langbar"><div class="lang" role="group" aria-label="Language · 언어">
+    <button type="button" id="langKo" aria-pressed="true">한국어</button><button type="button" id="langEn" aria-pressed="false">English</button>
+  </div></div>
 
   <section id="intro" class="stack" hidden>
     <div class="panel stack">
-      <h1>Video change rating <span class="ko">· 영상 변화 평가</span></h1>
+      <h1><span class="l-ko">영상 변화 평가</span><span class="l-en">Video change rating</span></h1>
       <div class="lede">
-        <p>Thank you for taking part. In each of the <span class="nTr">20</span> trials you will see a sentence that describes a change, a reference video, and two videos labelled A and B.<br><span class="ko">참여해 주셔서 감사합니다. <span class="nTr">20</span>개 문항마다 어떤 변화를 설명하는 문장, 기준 영상 하나, 그리고 A와 B 두 영상이 나옵니다.</span></p>
-        <p>Rate A and B separately on the two questions below. There are no right or wrong answers. The study takes about 5 minutes, and you can return to the previous trial with the Back button.<br><span class="ko">아래 두 질문에 대해 A와 B를 각각 따로 평가해 주세요. 정답은 없습니다. 약 5분이 걸리며, 이전 버튼으로 앞 문항으로 돌아갈 수 있습니다.</span></p>
-        <p>A computer with a large browser window works best, but a phone also works. The videos have no sound and play on a loop. Moving the time bar under any video moves all three videos together.<br><span class="ko">큰 화면의 컴퓨터를 권장하지만 휴대폰으로도 참여할 수 있습니다. 영상에는 소리가 없고 반복 재생됩니다. 어느 영상이든 아래 시간 막대를 움직이면 세 영상이 함께 움직입니다.</span></p>
-        <p class="mobile-only">On a phone, please use Wi-Fi because the videos total about 200 MB, and hold the phone upright. Switch between video A and video B with the A and B tabs.<br><span class="ko">휴대폰에서는 영상 용량이 약 200MB이므로 와이파이에 연결해 주시고, 휴대폰을 세로로 들어 주세요. A와 B 영상은 A/B 탭으로 번갈아 볼 수 있습니다.</span></p>
+        <p class="first"><span class="l-ko">변화가 없는 기준 영상(Reference)에, 변화를 일으키는 두 가지 방법 A와 B를 적용했습니다.</span><span class="l-en">Two methods, A and B, were applied to a reference video that shows no change, each trying to create the change described in a sentence.</span></p>
+        <p><span class="l-ko">총 <span class="nTr">20</span>개 문항마다 변화를 설명하는 문장, 기준 영상, 그리고 A와 B 영상이 나옵니다. 아래 두 질문에 대해 A와 B를 각각 따로 평가해 주세요. 정답은 없습니다.</span><span class="l-en">Each of the <span class="nTr">20</span> trials shows the sentence, the reference video, and videos A and B. Rate A and B separately on the two questions below. There are no right or wrong answers.</span></p>
+        <p><span class="l-ko">약 5분이 걸리며, 이전 버튼으로 앞 문항으로 돌아갈 수 있습니다. 영상에는 소리가 없고 반복 재생되며, 어느 영상이든 아래 시간 막대를 움직이면 세 영상이 함께 움직입니다.</span><span class="l-en">The study takes about 5 minutes, and you can return to the previous trial with the Back button. The videos have no sound and play on a loop. Moving the time bar under any video moves all three videos together.</span></p>
+        <p><span class="l-ko">큰 화면의 컴퓨터를 권장하지만 휴대폰으로도 참여할 수 있습니다. 참여해 주셔서 감사합니다.</span><span class="l-en">A computer with a large browser window works best, but a phone also works. Thank you for taking part.</span></p>
+        <p class="mobile-only"><span class="l-ko">휴대폰에서는 영상 용량이 약 200MB이므로 와이파이에 연결해 주시고, 휴대폰을 세로로 들어 주세요. A와 B 영상은 A/B 탭으로 번갈아 볼 수 있습니다.</span><span class="l-en">On a phone, please use Wi-Fi because the videos total about 200 MB, and hold the phone upright. Switch between videos A and B with the A and B tabs.</span></p>
       </div>
     </div>
     <div class="panel raffle stack">
-      <h3>Coffee draw <span class="ko">· 커피 추첨</span></h3>
-      <p>When you finish, you submit your answers with a short Google Form. We will draw 10 participants at random to receive a Mega Coffee Americano. To join the draw, enter your name and phone number in that form.<br><span class="ko">설문을 마치면 마지막에 구글 폼으로 응답을 제출합니다. 참여하신 분 중 10분을 추첨해 메가커피 아메리카노를 드립니다. 추첨에 참여하시려면 그 구글 폼에 성함과 전화번호를 남겨 주세요.</span></p>
+      <h3><span class="l-ko">커피 추첨</span><span class="l-en">Coffee draw</span></h3>
+      <p><span class="l-ko">설문을 마치면 마지막에 구글 폼으로 응답을 제출합니다. 참여하신 분 중 10분을 추첨해 메가커피 아메리카노를 드립니다. 추첨에 참여하시려면 그 구글 폼에 성함과 전화번호를 남겨 주세요.</span><span class="l-en">When you finish, you submit your answers with a short Google Form. We will draw 10 participants at random to receive a Mega Coffee Americano. To join the draw, enter your name and phone number in that form.</span></p>
     </div>
     <div class="qcards">
       <div class="panel qcard">
-        <h3>1. Video quality <span class="ko">· 영상 퀄리티</span></h3>
-        <p class="q small">Compared with the reference video, how is the quality of this video? Ignore whether the change happens.<br><span class="ko">기준 영상과 비교해 이 영상의 퀄리티는 어떤가요? 변화가 일어났는지는 무시하세요.</span></p>
-        <div class="legend"><b>1</b><span>Much worse <span class="ko">· 훨씬 나쁨</span></span><b>3</b><span>Same as the reference <span class="ko">· 기준 영상과 비슷함</span></span><b>5</b><span>Much better <span class="ko">· 훨씬 좋음</span></span></div>
+        <h3><span class="l-ko">1. 영상 퀄리티</span><span class="l-en">1. Video quality</span></h3>
+        <p class="q small"><span class="l-ko">기준 영상과 비교해 이 영상의 퀄리티는 어떤가요? 변화가 일어났는지는 무시하세요.</span><span class="l-en">Compared with the reference video, how is the quality of this video? Ignore whether the change happens.</span></p>
+        <div class="legend"><b>1</b><span><span class="l-ko">훨씬 나쁨</span><span class="l-en">Much worse</span></span><b>3</b><span><span class="l-ko">기준 영상과 비슷함</span><span class="l-en">Same as the reference</span></span><b>5</b><span><span class="l-ko">훨씬 좋음</span><span class="l-en">Much better</span></span></div>
       </div>
       <div class="panel qcard">
-        <h3>2. Transition naturalness <span class="ko">· 변화의 자연스러움</span></h3>
-        <p class="q small">How naturally does this video show the change described in the sentence?<br><span class="ko">이 영상은 문장에 적힌 변화를 얼마나 자연스럽게 보여주나요?</span></p>
-        <div class="legend"><b>1</b><span>No change <span class="ko">· 변화 없음</span></span><b>3</b><span>The requested change is visible <span class="ko">· 요청한 변화가 보임</span></span><b>5</b><span>Very natural change <span class="ko">· 매우 자연스러운 변화</span></span></div>
+        <h3><span class="l-ko">2. 변화의 자연스러움</span><span class="l-en">2. Transition naturalness</span></h3>
+        <p class="q small"><span class="l-ko">이 영상은 문장에 적힌 변화를 얼마나 자연스럽게 보여주나요?</span><span class="l-en">How naturally does this video show the change described in the sentence?</span></p>
+        <div class="legend"><b>1</b><span><span class="l-ko">변화가 자연스럽지 않음</span><span class="l-en">The change is not natural</span></span><b>3</b><span><span class="l-ko">요청한 변화가 보임</span><span class="l-en">The requested change is visible</span></span><b>5</b><span><span class="l-ko">매우 자연스러운 변화</span><span class="l-en">Very natural change</span></span></div>
       </div>
     </div>
     <div class="row">
-      <button type="button" class="btn primary" id="startBtn">Start · 시작하기</button>
-      <span class="small ko">Your ratings are used only for research. Your name and phone number are optional. · 평가 응답은 연구 목적으로만 사용되며, 성함과 전화번호 입력은 선택입니다.</span>
+      <button type="button" class="btn primary" id="startBtn">시작하기</button>
+      <span class="small muted"><span class="l-ko">평가 응답은 연구 목적으로만 사용되며, 성함과 전화번호 입력은 선택입니다.</span><span class="l-en">Your ratings are used only for research. Your name and phone number are optional.</span></span>
     </div>
   </section>
 
   <section id="trial" class="stack" hidden>
     <div class="top"><span class="count" id="count">1 / 20</span><div class="bar"><i id="barFill"></i></div></div>
     <div class="panel prompt">
-      <span class="lab">Sentence · 문장</span>
+      <span class="lab"><span class="l-ko">문장</span><span class="l-en">Sentence</span></span>
       <div class="ptxt"><p id="promptTxt" lang="en"></p><p id="promptKo" lang="ko"></p></div>
-      <div class="plegend"><mark class="sa">Start state · 시작 상태</mark><mark class="sb">Target state · 목표 상태</mark></div>
+      <div class="plegend"><mark class="sa"><span class="l-ko">시작 상태</span><span class="l-en">Start state</span></mark><mark class="sb"><span class="l-ko">목표 상태</span><span class="l-en">Target state</span></mark></div>
     </div>
     <div class="ref" id="refBox">
-      <div class="vlab"><span>Reference · 기준 영상</span></div>
-      <div class="stage" id="slotRef"><div class="wait">Loading · 불러오는 중</div></div>
-      <div class="ctl"><button type="button" class="pp" aria-label="Pause · 일시정지">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0" aria-label="Time · 시간"><span class="tm">0.0 / 5.0 s</span></div>
+      <div class="vlab"><span><span class="l-ko">기준 영상 (Reference)</span><span class="l-en">Reference</span></span></div>
+      <div class="stage" id="slotRef"><div class="wait"></div></div>
+      <div class="ctl"><button type="button" class="pp">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0"><span class="tm">0.0 / 5.0 s</span></div>
     </div>
-    <div class="tabs" role="tablist" aria-label="Video A or B">
+    <div class="tabs" role="tablist" aria-label="A / B">
       <button type="button" role="tab" id="tabL" aria-selected="true">A<span class="tick" id="tickL"></span></button>
       <button type="button" role="tab" id="tabR" aria-selected="false">B<span class="tick" id="tickR"></span></button>
     </div>
     <div class="vids" id="vids" data-show="L">
       <div class="side" data-side="L">
         <div class="vlab"><b>A</b></div>
-        <div class="stage" id="slotL"><div class="wait">Loading · 불러오는 중</div></div>
-        <div class="ctl"><button type="button" class="pp" aria-label="Pause · 일시정지">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0" aria-label="Time · 시간"><span class="tm">0.0 / 5.0 s</span></div>
-        <fieldset class="rate"><legend>Video quality <span class="ko">· 영상 퀄리티</span></legend>
+        <div class="stage" id="slotL"><div class="wait"></div></div>
+        <div class="ctl"><button type="button" class="pp">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0"><span class="tm">0.0 / 5.0 s</span></div>
+        <fieldset class="rate"><legend><span class="l-ko">영상 퀄리티</span><span class="l-en">Video quality</span></legend>
           <div class="scale" data-side="L" data-q="q"></div>
-          <div class="anchors"><span>Much worse<br>훨씬 나쁨</span><span>Same as the reference<br>기준 영상과 비슷함</span><span>Much better<br>훨씬 좋음</span></div></fieldset>
-        <fieldset class="rate"><legend>Transition naturalness <span class="ko">· 변화의 자연스러움</span></legend>
+          <div class="anchors"><span><span class="l-ko">훨씬 나쁨</span><span class="l-en">Much worse</span></span><span><span class="l-ko">기준 영상과 비슷함</span><span class="l-en">Same as the reference</span></span><span><span class="l-ko">훨씬 좋음</span><span class="l-en">Much better</span></span></div></fieldset>
+        <fieldset class="rate"><legend><span class="l-ko">변화의 자연스러움</span><span class="l-en">Transition naturalness</span></legend>
           <div class="scale" data-side="L" data-q="t"></div>
-          <div class="anchors"><span>No change<br>변화 없음</span><span>The requested change is visible<br>요청한 변화가 보임</span><span>Very natural<br>매우 자연스러움</span></div></fieldset>
-        <button type="button" class="btn mobile-only" id="goB">Go to video B · B 영상으로</button>
+          <div class="anchors"><span><span class="l-ko">자연스럽지 않음</span><span class="l-en">Not natural</span></span><span><span class="l-ko">요청한 변화가 보임</span><span class="l-en">The requested change is visible</span></span><span><span class="l-ko">매우 자연스러움</span><span class="l-en">Very natural</span></span></div></fieldset>
+        <button type="button" class="btn mobile-only" id="goB"><span class="l-ko">B 영상으로</span><span class="l-en">Go to video B</span></button>
       </div>
       <div class="side" data-side="R">
         <div class="vlab"><b>B</b></div>
-        <div class="stage" id="slotR"><div class="wait">Loading · 불러오는 중</div></div>
-        <div class="ctl"><button type="button" class="pp" aria-label="Pause · 일시정지">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0" aria-label="Time · 시간"><span class="tm">0.0 / 5.0 s</span></div>
-        <fieldset class="rate"><legend>Video quality <span class="ko">· 영상 퀄리티</span></legend>
+        <div class="stage" id="slotR"><div class="wait"></div></div>
+        <div class="ctl"><button type="button" class="pp">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0"><span class="tm">0.0 / 5.0 s</span></div>
+        <fieldset class="rate"><legend><span class="l-ko">영상 퀄리티</span><span class="l-en">Video quality</span></legend>
           <div class="scale" data-side="R" data-q="q"></div>
-          <div class="anchors"><span>Much worse<br>훨씬 나쁨</span><span>Same as the reference<br>기준 영상과 비슷함</span><span>Much better<br>훨씬 좋음</span></div></fieldset>
-        <fieldset class="rate"><legend>Transition naturalness <span class="ko">· 변화의 자연스러움</span></legend>
+          <div class="anchors"><span><span class="l-ko">훨씬 나쁨</span><span class="l-en">Much worse</span></span><span><span class="l-ko">기준 영상과 비슷함</span><span class="l-en">Same as the reference</span></span><span><span class="l-ko">훨씬 좋음</span><span class="l-en">Much better</span></span></div></fieldset>
+        <fieldset class="rate"><legend><span class="l-ko">변화의 자연스러움</span><span class="l-en">Transition naturalness</span></legend>
           <div class="scale" data-side="R" data-q="t"></div>
-          <div class="anchors"><span>No change<br>변화 없음</span><span>The requested change is visible<br>요청한 변화가 보임</span><span>Very natural<br>매우 자연스러움</span></div></fieldset>
+          <div class="anchors"><span><span class="l-ko">자연스럽지 않음</span><span class="l-en">Not natural</span></span><span><span class="l-ko">요청한 변화가 보임</span><span class="l-en">The requested change is visible</span></span><span><span class="l-ko">매우 자연스러움</span><span class="l-en">Very natural</span></span></div></fieldset>
       </div>
     </div>
     <div class="foot">
-      <button type="button" class="btn" id="backBtn" disabled>← Back · 이전</button>
+      <button type="button" class="btn" id="backBtn" disabled><span class="l-ko">← 이전</span><span class="l-en">← Back</span></button>
       <span class="hint" id="hint"></span>
-      <button type="button" class="btn primary" id="nextBtn" disabled>Next · 다음 →</button>
+      <button type="button" class="btn primary" id="nextBtn" disabled><span class="l-ko">다음 →</span><span class="l-en">Next →</span></button>
     </div>
   </section>
 
   <section id="done" class="stack" hidden>
     <div class="panel stack">
-      <h2>All done. Thank you! <span class="ko">· 모두 끝났습니다. 감사합니다!</span></h2>
-      <p>Open the submission form and press Submit. The form opens with your response code already filled in. If the field is empty, copy the code below and paste it. Your answers reach us only when you submit the form.<br><span class="ko">제출 폼을 열고 제출 버튼을 눌러 주세요. 폼을 열면 응답 코드가 자동으로 입력되어 있습니다. 칸이 비어 있으면 아래 코드를 복사해 붙여넣어 주세요. 폼을 제출해야 응답이 전달됩니다.</span></p>
-      <p class="raffle-note">To join the coffee draw, enter your name and phone number in the form before you submit.<br><span class="ko">커피 추첨에 참여하시려면 폼에 성함과 전화번호를 입력한 뒤 제출해 주세요.</span></p>
-      <p id="formRow"><a class="btn primary" id="formLink" href="#" target="_blank" rel="noopener">Open the submission form · 제출 폼 열기</a></p>
+      <h2><span class="l-ko">모두 끝났습니다. 감사합니다!</span><span class="l-en">All done. Thank you!</span></h2>
+      <p><span class="l-ko">제출 폼을 열고 제출 버튼을 눌러 주세요. 폼을 열면 응답 코드가 자동으로 입력되어 있습니다. 칸이 비어 있으면 아래 코드를 복사해 붙여넣어 주세요. 폼을 제출해야 응답이 전달됩니다.</span><span class="l-en">Open the submission form and press Submit. The form opens with your response code already filled in. If the field is empty, copy the code below and paste it. Your answers reach us only when you submit the form.</span></p>
+      <p class="raffle-note"><span class="l-ko">커피 추첨에 참여하시려면 폼에 성함과 전화번호를 입력한 뒤 제출해 주세요.</span><span class="l-en">To join the coffee draw, enter your name and phone number in the form before you submit.</span></p>
+      <p id="formRow"><a class="btn primary" id="formLink" href="#" target="_blank" rel="noopener"><span class="l-ko">제출 폼 열기</span><span class="l-en">Open the submission form</span></a></p>
       <div class="code" id="codeBox"></div>
       <div class="row">
-        <button type="button" class="btn" id="copyBtn">Copy code · 코드 복사</button>
+        <button type="button" class="btn" id="copyBtn"><span class="l-ko">코드 복사</span><span class="l-en">Copy code</span></button>
         <span class="hint" id="copyMsg"></span>
       </div>
-      <p class="small ko" id="formMissing" hidden>The submission form link will appear here. · 제출 폼 링크가 여기에 표시될 예정입니다.</p>
+      <p class="small muted" id="formMissing" hidden><span class="l-ko">제출 폼 링크가 여기에 표시될 예정입니다.</span><span class="l-en">The submission form link will appear here.</span></p>
     </div>
   </section>
 </main>
 
 <script id="core">
 /* Pure helpers (no DOM). The response code is decoded by decode_codes.py; keep the two in step. */
-const TRIALS = [{"id": "t01", "prompt": "A gemstone changes from dull to bright.", "ko": "보석이 탁한 상태에서 밝게 빛나는 상태로 바뀐다.", "pa": "dull", "pb": "bright", "ka": "탁한 상태", "kb": "밝게 빛나는 상태", "ref": "v/6f2c627bf322.mp4", "x": "v/9545ee889fe4.mp4", "y": "v/e339a930d55d.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t02", "prompt": "A rose's petals shifting from white to a deep crimson as it blooms.", "ko": "장미가 피어나면서 꽃잎이 흰색에서 짙은 진홍색으로 바뀐다.", "pa": "white", "pb": "a deep crimson", "ka": "흰색", "kb": "짙은 진홍색", "ref": "v/593947eaa099.mp4", "x": "v/9bf1ca118783.mp4", "y": "v/56671509bb0a.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t03", "prompt": "A flower changes from purple to orange.", "ko": "꽃이 보라색에서 주황색으로 바뀐다.", "pa": "purple", "pb": "orange", "ka": "보라색", "kb": "주황색", "ref": "v/4ea9f376bc25.mp4", "x": "v/310aec9a72f2.mp4", "y": "v/01f743c20f56.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t04", "prompt": "A mailbox with winter snow turning to spring bloom.", "ko": "우체통 주변이 겨울 눈 풍경에서 봄꽃이 핀 풍경으로 바뀐다.", "pa": "winter snow", "pb": "spring bloom", "ka": "겨울 눈 풍경", "kb": "봄꽃이 핀 풍경", "ref": "v/985f2a095ee8.mp4", "x": "v/64c75d32fe61.mp4", "y": "v/581559e2d153.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t05", "prompt": "A lantern glowing brighter as the flame is turned up.", "ko": "불꽃을 키우자 랜턴이 더 밝게 빛난다.", "pa": "", "pb": "glowing brighter", "ka": "", "kb": "더 밝게 빛난다", "ref": "v/c44acf25e346.mp4", "x": "v/134bb18fbdb1.mp4", "y": "v/1e2e6470ff1f.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t06", "prompt": "A sculpture transforming from ice to bronze.", "ko": "조각상이 얼음에서 청동으로 바뀐다.", "pa": "ice", "pb": "bronze", "ka": "얼음", "kb": "청동", "ref": "v/77cae07cb579.mp4", "x": "v/86eab5c34e7e.mp4", "y": "v/655c78f6d824.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t07", "prompt": "A bird's feathers shifting hues from grey to a brilliant blue.", "ko": "새의 깃털 색이 회색에서 선명한 파란색으로 바뀐다.", "pa": "grey", "pb": "a brilliant blue", "ka": "회색", "kb": "선명한 파란색", "ref": "v/43f26e85df08.mp4", "x": "v/050c84e0164b.mp4", "y": "v/990d381df22f.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t08", "prompt": "A wall changes from yellow to grey.", "ko": "벽이 노란색에서 회색으로 바뀐다.", "pa": "yellow", "pb": "grey", "ka": "노란색", "kb": "회색", "ref": "v/1788260df254.mp4", "x": "v/add93b041641.mp4", "y": "v/5ed835c719c2.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t09", "prompt": "A lamp changes from dim to bright.", "ko": "램프가 희미한 상태에서 밝은 상태로 바뀐다.", "pa": "dim", "pb": "bright", "ka": "희미한 상태", "kb": "밝은 상태", "ref": "v/37a706762832.mp4", "x": "v/de1b320a88ea.mp4", "y": "v/2cd59ddbef12.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t10", "prompt": "A statue morphing from marble to gold.", "ko": "석상이 대리석에서 금으로 바뀐다.", "pa": "marble", "pb": "gold", "ka": "대리석", "kb": "금", "ref": "v/1dcd761e07cb.mp4", "x": "v/a92fdbc52933.mp4", "y": "v/96727fed0bb9.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t11", "prompt": "The sky changes from bright to dark.", "ko": "하늘이 밝은 상태에서 어두운 상태로 바뀐다.", "pa": "bright", "pb": "dark", "ka": "밝은 상태", "kb": "어두운 상태", "ref": "v/59ece8e3574f.mp4", "x": "v/c029855dbf55.mp4", "y": "v/e794dcb0b82e.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t12", "prompt": "An empty road in the desert changing from the clear, bright daylight to a starry night.", "ko": "사막의 텅 빈 도로가 맑고 밝은 낮에서 별이 빛나는 밤으로 바뀐다.", "pa": "the clear, bright daylight", "pb": "a starry night", "ka": "맑고 밝은 낮", "kb": "별이 빛나는 밤", "ref": "v/f5ec01088475.mp4", "x": "v/29092e416788.mp4", "y": "v/59ba5c906158.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t13", "prompt": "A screen changes from dark to bright.", "ko": "화면이 어두운 상태에서 밝은 상태로 바뀐다.", "pa": "dark", "pb": "bright", "ka": "어두운 상태", "kb": "밝은 상태", "ref": "v/9ec04350cc17.mp4", "x": "v/d684b600e612.mp4", "y": "v/5ee39ed89edd.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t14", "prompt": "A car changes from white to red.", "ko": "자동차가 흰색에서 빨간색으로 바뀐다.", "pa": "white", "pb": "red", "ka": "흰색", "kb": "빨간색", "ref": "v/fdf057e485b6.mp4", "x": "v/fd0b4f859933.mp4", "y": "v/1894d9855162.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t15", "prompt": "A pair of shoes changes from red to yellow.", "ko": "신발 한 켤레가 빨간색에서 노란색으로 바뀐다.", "pa": "red", "pb": "yellow", "ka": "빨간색", "kb": "노란색", "ref": "v/68b43eaabe17.mp4", "x": "v/13e7eb04b39b.mp4", "y": "v/142c78068577.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t16", "prompt": "A butterfly's wings change from white to yellow.", "ko": "나비의 날개가 흰색에서 노란색으로 바뀐다.", "pa": "white", "pb": "yellow", "ka": "흰색", "kb": "노란색", "ref": "v/7a675fd11a32.mp4", "x": "v/bbb3cf00377c.mp4", "y": "v/505b4ed3d99e.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t17", "prompt": "The moon changes from yellow to silver.", "ko": "달이 노란색에서 은색으로 바뀐다.", "pa": "yellow", "pb": "silver", "ka": "노란색", "kb": "은색", "ref": "v/9e18c37ee1e2.mp4", "x": "v/b4a3926271f2.mp4", "y": "v/20b88e9e7bb8.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t18", "prompt": "A seashell changes from beige to pink.", "ko": "조개껍데기가 베이지색에서 분홍색으로 바뀐다.", "pa": "beige", "pb": "pink", "ka": "베이지색", "kb": "분홍색", "ref": "v/ee6f79ded9f2.mp4", "x": "v/e771ad783715.mp4", "y": "v/228a8a9e1df7.mp4", "w": 768, "h": 512, "g": "l"}];
-const BUILD = "2861db3a";
+const TRIALS = [{"id": "t01", "prompt": "A lantern glowing brighter as the flame is turned up.", "ko": "불꽃을 키우자 랜턴이 더 밝게 빛난다.", "pa": "", "pb": "glowing brighter", "ka": "", "kb": "더 밝게 빛난다", "ref": "v/74a3429d48cf.mp4", "x": "v/04936d9f53d0.mp4", "y": "v/bc4068e3bca7.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t02", "prompt": "A lamp changes from dim to bright.", "ko": "램프가 희미한 상태에서 밝은 상태로 바뀐다.", "pa": "dim", "pb": "bright", "ka": "희미한 상태", "kb": "밝은 상태", "ref": "v/1abf11c0433b.mp4", "x": "v/50bc8a3b435d.mp4", "y": "v/7a293f3bbfa1.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t03", "prompt": "A gemstone changes from dull to bright.", "ko": "보석이 탁한 상태에서 밝게 빛나는 상태로 바뀐다.", "pa": "dull", "pb": "bright", "ka": "탁한 상태", "kb": "밝게 빛나는 상태", "ref": "v/0ad4e7492d2c.mp4", "x": "v/305aa535e81e.mp4", "y": "v/d7f7221384e0.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t04", "prompt": "A screen changes from dark to bright.", "ko": "화면이 어두운 상태에서 밝은 상태로 바뀐다.", "pa": "dark", "pb": "bright", "ka": "어두운 상태", "kb": "밝은 상태", "ref": "v/9c233bb97e79.mp4", "x": "v/fd25829e3de4.mp4", "y": "v/5252fb38bdb1.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t05", "prompt": "A bird's feathers shifting hues from grey to a brilliant blue.", "ko": "새의 깃털 색이 회색에서 선명한 파란색으로 바뀐다.", "pa": "grey", "pb": "a brilliant blue", "ka": "회색", "kb": "선명한 파란색", "ref": "v/fd0a30a0817b.mp4", "x": "v/04a1ad5b054b.mp4", "y": "v/2fb1b7bfdef3.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t06", "prompt": "A piece of fabric changes from pink to blue.", "ko": "천 한 조각이 분홍색에서 파란색으로 바뀐다.", "pa": "pink", "pb": "blue", "ka": "분홍색", "kb": "파란색", "ref": "v/efacb5b3939a.mp4", "x": "v/c9f1bcab7357.mp4", "y": "v/9434973a3747.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t07", "prompt": "The moon changes from yellow to silver.", "ko": "달이 노란색에서 은색으로 바뀐다.", "pa": "yellow", "pb": "silver", "ka": "노란색", "kb": "은색", "ref": "v/bb47e59b0bb7.mp4", "x": "v/84c4158a1999.mp4", "y": "v/140b0833dfb1.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t08", "prompt": "A rose's petals shifting from white to a deep crimson as it blooms.", "ko": "장미가 피어나면서 꽃잎이 흰색에서 짙은 진홍색으로 바뀐다.", "pa": "white", "pb": "a deep crimson", "ka": "흰색", "kb": "짙은 진홍색", "ref": "v/aa31ea164aed.mp4", "x": "v/5cf632d21b1f.mp4", "y": "v/5a4e02c53edc.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t09", "prompt": "A car changes from white to red.", "ko": "자동차가 흰색에서 빨간색으로 바뀐다.", "pa": "white", "pb": "red", "ka": "흰색", "kb": "빨간색", "ref": "v/a3294d2f3be6.mp4", "x": "v/31d4e01af024.mp4", "y": "v/9d22ebdb4ea2.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t10", "prompt": "A statue morphing from marble to gold.", "ko": "석상이 대리석에서 금으로 바뀐다.", "pa": "marble", "pb": "gold", "ka": "대리석", "kb": "금", "ref": "v/456bee23e463.mp4", "x": "v/aa12aaf7a6ed.mp4", "y": "v/628283e157df.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t11", "prompt": "A sculpture transforming from ice to bronze.", "ko": "조각상이 얼음에서 청동으로 바뀐다.", "pa": "ice", "pb": "bronze", "ka": "얼음", "kb": "청동", "ref": "v/ac874ce0c716.mp4", "x": "v/019a5340b17d.mp4", "y": "v/f706b6a3c950.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t12", "prompt": "A pair of shoes changes from red to yellow.", "ko": "신발 한 켤레가 빨간색에서 노란색으로 바뀐다.", "pa": "red", "pb": "yellow", "ka": "빨간색", "kb": "노란색", "ref": "v/ca303411d022.mp4", "x": "v/bf1daeb99550.mp4", "y": "v/2f30f26b16d8.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t13", "prompt": "An empty road in the desert changing from the clear, bright daylight to a starry night.", "ko": "사막의 텅 빈 도로가 맑고 밝은 낮에서 별이 빛나는 밤으로 바뀐다.", "pa": "the clear, bright daylight", "pb": "a starry night", "ka": "맑고 밝은 낮", "kb": "별이 빛나는 밤", "ref": "v/978efeb7cea0.mp4", "x": "v/af851c9844f1.mp4", "y": "v/3797c4a75ad2.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t14", "prompt": "A butterfly's wings change from white to yellow.", "ko": "나비의 날개가 흰색에서 노란색으로 바뀐다.", "pa": "white", "pb": "yellow", "ka": "흰색", "kb": "노란색", "ref": "v/ee1181702d9f.mp4", "x": "v/70b215f4ca14.mp4", "y": "v/a8a5d444d7cb.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t15", "prompt": "The sky changes from bright to dark.", "ko": "하늘이 밝은 상태에서 어두운 상태로 바뀐다.", "pa": "bright", "pb": "dark", "ka": "밝은 상태", "kb": "어두운 상태", "ref": "v/685b3d9dc66e.mp4", "x": "v/cd7386d09a4f.mp4", "y": "v/340d9f9d54ba.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t16", "prompt": "A seashell changes from beige to pink.", "ko": "조개껍데기가 베이지색에서 분홍색으로 바뀐다.", "pa": "beige", "pb": "pink", "ka": "베이지색", "kb": "분홍색", "ref": "v/21602f224cb9.mp4", "x": "v/b2e7f1900d5c.mp4", "y": "v/a4cecfa5f2ab.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t17", "prompt": "A flower changes from purple to orange.", "ko": "꽃이 보라색에서 주황색으로 바뀐다.", "pa": "purple", "pb": "orange", "ka": "보라색", "kb": "주황색", "ref": "v/968b526aecdd.mp4", "x": "v/ca2039591197.mp4", "y": "v/05ebf4b9f80b.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t18", "prompt": "A mailbox with winter snow turning to spring bloom.", "ko": "우체통 주변이 겨울 눈 풍경에서 봄꽃이 핀 풍경으로 바뀐다.", "pa": "winter snow", "pb": "spring bloom", "ka": "겨울 눈 풍경", "kb": "봄꽃이 핀 풍경", "ref": "v/31aaf72148f3.mp4", "x": "v/ec35842d1235.mp4", "y": "v/0366bc1dc291.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t19", "prompt": "A mountain view shifting from a snowy winter landscape to a spring bloom.", "ko": "산의 풍경이 눈 덮인 겨울 풍경에서 꽃이 핀 봄 풍경으로 바뀐다.", "pa": "a snowy winter landscape", "pb": "a spring bloom", "ka": "눈 덮인 겨울 풍경", "kb": "꽃이 핀 봄 풍경", "ref": "v/04e9878b715b.mp4", "x": "v/71e86d9eadc1.mp4", "y": "v/9355da9fd39a.mp4", "w": 768, "h": 512, "g": "l"}];
+const BUILD = "945c7a99";
 const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdMcqWIqEVaqchjsUfSSJXvQUxn0lbSmlUFCQGsGW8yeq1dLg/viewform";
 const FORM_ENTRY = "entry.1648280773";   // Google Form field id, used to pre-fill the code
 const DRAFT = false;
 const CODE_VER = 'US3';
-const REPEATS = 2;          // one Wan2.2 and one LTX-2.3 trial are shown again later with A and B swapped (consistency check)
+const REPEATS = 1;   // trials shown a second time later with A and B swapped (consistency check)
 function checksum(s){ let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 1679616; return h.toString(36).padStart(4, '0'); }
 /* Answers are kept per position k of S.seq as {L: {q, t}, R: {q, t}} (what was on the left / right); x is on the left when xLeftAt(S, k). */
 function xLeftAt(S, k){ const q = S.seq[k]; return (S.sides[q.i] === 1) !== !!q.rep; }
@@ -259,14 +269,15 @@ function encodeCode(S){
   const s = CODE_VER + S.nonce + (S.layout === 'm' ? 'm' : 'd') + body;
   return s + checksum(s);
 }
-/* Sequence: the trials shuffled, then one Wan2.2 and one LTX-2.3 trial from the first 11 are shown again at least 6 trials later. */
+/* Sequence: the trials shuffled, then REPEATS trials from the first 11 are shown again at least 6 trials later
+   (one repeat: any trial; two repeats: one Wan2.2 and one LTX-2.3). */
 function makeSeq(rnd){
   const order = TRIALS.map((t, i) => i);
   for (let i = order.length - 1; i > 0; i--) { const j = rnd(i + 1); [order[i], order[j]] = [order[j], order[i]]; }
   const seq = order.map(i => ({i, rep: 0}));
   const picks = [];
-  for (const g of ['w', 'l']) {
-    const cand = seq.slice(0, 11).filter(q => TRIALS[q.i].g === g);
+  for (const g of (REPEATS >= 2 ? ['w', 'l'] : [null])) {
+    const cand = seq.slice(0, 11).filter(q => (g === null || TRIALS[q.i].g === g) && !picks.includes(q.i));
     if (cand.length && picks.length < REPEATS) picks.push(cand[rnd(cand.length)].i);
   }
   for (const i of picks) {
@@ -282,7 +293,7 @@ function newState(rnd, layout){
 </script>
 <script>
 (() => {
-  const KEY = 'us061_' + BUILD;
+  const KEY = 'us061_' + BUILD, LANG_KEY = 'us061_lang';
   const N = TRIALS.length + REPEATS;
   const $ = id => document.getElementById(id);
   const rnd = n => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; };
@@ -293,6 +304,17 @@ function newState(rnd, layout){
     set(s){ try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} },
     clear(){ try { localStorage.removeItem(KEY); } catch (e) {} }
   };
+  /* interface strings set from script (everything else uses .l-ko / .l-en spans) */
+  const TX = {
+    ko: { start: '시작하기', cont: (i, n) => `이어서 하기 (${i} / ${n})`, loading: '불러오는 중', pause: '일시정지', play: '재생', time: '시간',
+          blocked: '영상이 재생되지 않으면 영상 아래 ▶ 버튼을 눌러 주세요', both: 'A와 B 모두 두 질문에 답해 주세요',
+          needA: 'A 영상 평가가 남았습니다', needB: 'B 영상 평가가 남았습니다', copied: '복사됨', copyFail: '코드가 선택되었습니다. Ctrl+C(⌘C) 또는 길게 눌러 복사해 주세요.' },
+    en: { start: 'Start', cont: (i, n) => `Continue (${i} / ${n})`, loading: 'Loading', pause: 'Pause', play: 'Play', time: 'Time',
+          blocked: 'If the videos do not play, tap ▶ under a video', both: 'Rate A and B on both questions',
+          needA: 'Video A still needs ratings', needB: 'Video B still needs ratings', copied: 'Copied', copyFail: 'The code is selected. Copy it with Ctrl+C (⌘C) or long-press.' }
+  };
+  let LANG = 'ko';
+  const T = (k, ...a) => { const v = TX[LANG][k]; return typeof v === 'function' ? v(...a) : v; };
   let S = store.get();
   let tStart = 0, vids = [], blocked = false, playing = true, scrubbing = false;
   const pool = new Map();
@@ -307,6 +329,17 @@ function newState(rnd, layout){
   });
 
   function show(name){ ['intro', 'trial', 'done'].forEach(s => { $(s).hidden = s !== name; }); window.scrollTo(0, 0); }
+  function paintStart(){ const resume = S && !S.done && S.idx > 0; $('startBtn').textContent = resume ? T('cont', S.idx + 1, N) : T('start'); }
+  function setLang(l){
+    LANG = l === 'en' ? 'en' : 'ko';
+    $('app').dataset.lang = LANG; document.documentElement.lang = LANG;
+    $('langKo').setAttribute('aria-pressed', String(LANG === 'ko')); $('langEn').setAttribute('aria-pressed', String(LANG === 'en'));
+    try { localStorage.setItem(LANG_KEY, LANG); } catch (e) {}
+    paintStart(); paintCtl(); update();
+    document.querySelectorAll('.stage .wait').forEach(w => { w.textContent = T('loading'); });
+    document.querySelectorAll('.ctl .seek').forEach(s => s.setAttribute('aria-label', T('time')));
+    $('copyMsg').textContent = '';
+  }
   /* sentence with the start (a) and target (b) phrases marked */
   function hl(text, a, b){
     const frag = document.createDocumentFragment(), marks = [];
@@ -345,7 +378,7 @@ function newState(rnd, layout){
     });
   }
   function active(){ return phone.matches ? [vids[0], $('vids').dataset.show === 'R' ? vids[2] : vids[1]] : vids; }
-  function cover(){ return Object.assign(document.createElement('div'), {className: 'wait', textContent: 'Loading · 불러오는 중'}); }
+  function cover(){ return Object.assign(document.createElement('div'), {className: 'wait', textContent: T('loading')}); }
   function uncover(v){ const w = v.parentElement && v.parentElement.querySelector('.wait'); if (w) w.remove(); }
   function covered(v){ return !!(v.parentElement && v.parentElement.querySelector('.wait')); }
   function cur(){ return S.ans[S.idx] || (S.ans[S.idx] = {L: {}, R: {}}); }
@@ -367,7 +400,7 @@ function newState(rnd, layout){
     else pauseAll();
     paintCtl(); update();
   }
-  function paintCtl(){ document.querySelectorAll('.ctl .pp').forEach(b => { b.textContent = playing ? '❚❚' : '▶'; b.setAttribute('aria-label', playing ? 'Pause · 일시정지' : 'Play · 재생'); }); }
+  function paintCtl(){ document.querySelectorAll('.ctl .pp').forEach(b => { b.textContent = playing ? '❚❚' : '▶'; b.setAttribute('aria-label', playing ? T('pause') : T('play')); }); }
   function tick(){
     requestAnimationFrame(tick);
     if (!vids.length || $('trial').hidden) return;
@@ -434,9 +467,7 @@ function newState(rnd, layout){
     $('tickL').textContent = l ? '✓' : ''; $('tickR').textContent = r ? '✓' : '';
     $('nextBtn').disabled = !(l && r);
     $('backBtn').disabled = S.idx === 0;
-    $('hint').textContent = blocked ? 'If the videos do not play, tap ▶ under a video · 영상이 재생되지 않으면 영상 아래 ▶ 버튼을 눌러 주세요'
-      : (l && r) ? '' : (!l && !r) ? 'Rate A and B on both questions · A와 B 모두 두 질문에 답해 주세요'
-      : !l ? 'Video A still needs ratings · A 영상 평가가 남았습니다' : 'Video B still needs ratings · B 영상 평가가 남았습니다';
+    $('hint').textContent = blocked ? T('blocked') : (l && r) ? '' : (!l && !r) ? T('both') : !l ? T('needA') : T('needB');
   }
   function addTime(){ if (S && !S.done && tStart && !$('trial').hidden) { S.tms[S.idx] = (S.tms[S.idx] || 0) + (Date.now() - tStart); tStart = Date.now(); store.set(S); } }
 
@@ -458,11 +489,7 @@ function newState(rnd, layout){
     show('done');
   }
 
-  function showIntro(){
-    const resume = S && !S.done && S.idx > 0;
-    $('startBtn').textContent = resume ? `Continue (${S.idx + 1} / ${N}) · 이어서 하기` : 'Start · 시작하기';
-    show('intro');
-  }
+  function showIntro(){ paintStart(); show('intro'); }
 
   document.addEventListener('input', e => {
     const s = e.target;
@@ -481,6 +508,8 @@ function newState(rnd, layout){
   document.addEventListener('pointerup', endScrub);
   document.addEventListener('touchend', endScrub);
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.ctl .pp') && vids.length) setPlaying(!playing); });
+  $('langKo').addEventListener('click', () => setLang('ko'));
+  $('langEn').addEventListener('click', () => setLang('en'));
   $('startBtn').addEventListener('click', () => {
     if (!S) { S = newState(rnd, phone.matches ? 'm' : 'd'); store.set(S); }
     showTrial(); kick();
@@ -503,8 +532,8 @@ function newState(rnd, layout){
   $('copyBtn').addEventListener('click', () => {
     const code = $('codeBox').textContent;
     const selectIt = () => { const r = document.createRange(); r.selectNodeContents($('codeBox')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
-    const ok = () => { $('copyMsg').textContent = 'Copied · 복사됨'; };
-    const fail = () => { selectIt(); $('copyMsg').textContent = 'The code is selected. Copy it with Ctrl+C (⌘C) or long-press. · 코드가 선택되었습니다. Ctrl+C(⌘C) 또는 길게 눌러 복사해 주세요.'; };
+    const ok = () => { $('copyMsg').textContent = T('copied'); };
+    const fail = () => { selectIt(); $('copyMsg').textContent = T('copyFail'); };
     try { navigator.clipboard.writeText(code).then(ok, fail); } catch (e) { fail(); }
   });
   window.addEventListener('pagehide', addTime);
@@ -520,6 +549,8 @@ function newState(rnd, layout){
     showIntro(); return true;
   }
   window.addEventListener('hashchange', hashReset);
+  let saved = null; try { saved = localStorage.getItem(LANG_KEY); } catch (e) {}
+  setLang(saved === 'en' ? 'en' : 'ko');            // Korean unless this viewer chose English before
   if (!hashReset()) { if (S && S.done) showDone(); else showIntro(); }
 })();
 </script>
