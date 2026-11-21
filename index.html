@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Video Change Rating</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/* Layout: an evaluation bench. Prompt strip on top, the reference centred, A and B side by side, each with its own two rating rails.
+   Phone (<=760px): the reference stays on top and A / B are shown one at a time under tabs; the Next bar sticks to the bottom. */
+:root{
+  --bg:#eef0ee; --surface:#ffffff; --ink:#1a1d1b; --mute:#5c625e; --line:#d5d9d5;
+  --accent:#2c56c9; --accent-ink:#ffffff; --accent-soft:#dfe7fb; --warn:#a8481f; --stage:#0b0c0c;
+  --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141615; --surface:#1d201e; --ink:#e7e9e7; --mute:#9aa19c; --line:#323734;
+  --accent:#86a6ff; --accent-ink:#0c1328; --accent-soft:#25304d; --warn:#f09468; --stage:#000000; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141615; --surface:#1d201e; --ink:#e7e9e7; --mute:#9aa19c; --line:#323734;
+  --accent:#86a6ff; --accent-ink:#0c1328; --accent-soft:#25304d; --warn:#f09468; --stage:#000000; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 0}
+main{max-width:1180px;margin:0 auto;display:grid;gap:18px;padding-bottom:28px}
+h1,h2{font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
+h1{font-size:26px}h2{font-size:21px}
+p{margin:0}
+.ko{color:var(--mute)}
+.stack{display:grid;gap:10px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.lede{max-width:68ch;display:grid;gap:12px}
+.qcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:12px}
+.qcard h3,.raffle h3{margin:0 0 4px;font-size:16px;font-weight:600}
+.raffle{background:var(--accent-soft);border-color:var(--accent-soft)}
+.raffle-note{background:var(--accent-soft);border-radius:8px;padding:10px 12px}
+.qcard .q{margin-bottom:10px}
+.legend{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:14px}
+.legend b{font-family:var(--mono);font-weight:500;display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;background:var(--accent-soft)}
+.legend span{align-self:center}
+.btn{display:inline-block;text-decoration:none;font:inherit;font-weight:600;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px 18px;cursor:pointer;touch-action:manipulation}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,.tabs button:focus-visible,.scale input:focus-visible+label,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.small{font-size:13px}
+.mobile-only{display:none}
+.draft{border:1px dashed var(--warn);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:13px}
+.draft button{font:inherit;color:inherit;background:none;border:1px solid currentColor;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:6px}
+/* trial */
+.top{display:flex;align-items:center;gap:14px}
+.count{font-family:var(--mono);font-size:14px;white-space:nowrap}
+.bar{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.prompt{display:grid;gap:4px}
+.prompt .lab,.vlab{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.prompt .txt{font-size:20px;line-height:1.4;font-weight:500}
+.vids{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.ref{width:min(100%,calc((100% - 16px)/2));margin:0 auto;display:grid;gap:6px;scroll-margin-top:8px}
+.side{display:grid;gap:10px;align-content:start;min-width:0}
+.vlab{display:flex;justify-content:space-between;align-items:baseline}
+.vlab b{font-size:20px;letter-spacing:0;color:var(--ink);text-transform:none}
+.stage{position:relative;background:var(--stage);border-radius:8px;overflow:hidden;aspect-ratio:var(--ar,16/9);max-width:100%}
+.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.stage .wait{position:absolute;inset:0;display:grid;place-items:center;color:#cfd3cf;font-size:13px;background:var(--stage)}
+.tabs{display:none}
+.tabs button{font:inherit;font-weight:600;font-size:17px;height:46px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--mute);cursor:pointer;touch-action:manipulation}
+.tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.tabs .tick{color:var(--accent);margin-left:8px}
+fieldset.rate{border:1px solid var(--line);border-radius:10px;margin:0;padding:10px 12px 8px;display:grid;gap:6px;min-width:0}
+fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.scale input{position:absolute;opacity:0;width:1px;height:1px}
+.scale label{display:grid;place-items:center;height:40px;border:1px solid var(--line);border-radius:8px;font-family:var(--mono);font-size:16px;cursor:pointer;user-select:none;-webkit-user-select:none;background:var(--surface);touch-action:manipulation}
+.scale label:hover{border-color:var(--accent)}
+.scale input:checked+label{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.anchors{display:grid;grid-template-columns:repeat(5,1fr);font-size:12px;line-height:1.3;color:var(--mute)}
+.anchors span:nth-child(1){grid-column:1;text-align:left}
+.anchors span:nth-child(2){grid-column:2/5;text-align:center}
+.anchors span:nth-child(3){grid-column:5;text-align:right}
+.foot{position:sticky;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--line);
+  padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+.hint{color:var(--mute);font-size:13px;min-height:1.2em}
+/* done */
+.code{font-family:var(--mono);font-size:15px;line-height:1.6;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;user-select:all;-webkit-user-select:all}
+@media (max-width:760px){
+  body{padding-block:12px 0}
+  main{gap:12px}
+  h1{font-size:22px}
+  .panel{padding:12px 14px}
+  .prompt .txt{font-size:17px}
+  .vids{grid-template-columns:1fr}
+  .ref{width:100%}
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .vids[data-show="L"] .side[data-side="R"],.vids[data-show="R"] .side[data-side="L"]{display:none}
+  .side .vlab{display:none}
+  .mobile-only{display:block}
+  .side .btn.mobile-only{width:100%}
+  .scale label{height:46px}
+  .anchors{font-size:11px}
+  .foot .hint{order:3;flex-basis:100%;text-align:center}
+  .foot .btn{padding:10px 14px}
+}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <div class="draft" id="draftNote" hidden>DRAFT preview. Answers stay in this browser only. <button type="button" id="resetBtn">Reset</button></div>
+
+  <section id="intro" class="stack" hidden>
+    <div class="panel stack">
+      <h1>Video change rating <span class="ko">· 영상 변화 평가</span></h1>
+      <div class="lede">
+        <p>Thank you for taking part. In each of the <span class="nTr">20</span> trials you will see a sentence that describes a change, a reference video, and two videos labelled A and B.<br><span class="ko">참여해 주셔서 감사합니다. <span class="nTr">20</span>개 문항마다 어떤 변화를 설명하는 문장, 기준 영상 하나, 그리고 A와 B 두 영상이 나옵니다.</span></p>
+        <p>Rate A and B separately on the two questions below. There are no right or wrong answers. The study takes about 5 minutes, and you cannot go back to earlier trials.<br><span class="ko">아래 두 질문에 대해 A와 B를 각각 따로 평가해 주세요. 정답은 없습니다. 약 5분이 걸리며, 지나간 문항으로 돌아갈 수 없습니다.</span></p>
+        <p>A computer with a large browser window works best, but a phone also works. The videos have no sound and play on a loop.<br><span class="ko">큰 화면의 컴퓨터를 권장하지만 휴대폰으로도 참여할 수 있습니다. 영상에는 소리가 없고 반복 재생됩니다.</span></p>
+        <p class="mobile-only">On a phone, please use Wi-Fi because the videos total about 200 MB, and hold the phone upright. Switch between video A and video B with the A and B tabs.<br><span class="ko">휴대폰에서는 영상 용량이 약 200MB이므로 와이파이에 연결해 주시고, 휴대폰을 세로로 들어 주세요. A와 B 영상은 A/B 탭으로 번갈아 볼 수 있습니다.</span></p>
+      </div>
+    </div>
+    <div class="panel raffle stack">
+      <h3>Coffee draw <span class="ko">· 커피 추첨</span></h3>
+      <p>When you finish, you submit your answers with a short Google Form. We will draw 10 participants at random to receive a Mega Coffee Americano. To join the draw, enter your name and phone number in that form.<br><span class="ko">설문을 마치면 마지막에 구글 폼으로 응답을 제출합니다. 참여하신 분 중 10분을 추첨해 메가커피 아메리카노를 드립니다. 추첨에 참여하시려면 그 구글 폼에 성함과 전화번호를 남겨 주세요.</span></p>
+    </div>
+    <div class="qcards">
+      <div class="panel qcard">
+        <h3>1. Visual quality <span class="ko">· 화질</span></h3>
+        <p class="q small">Compared with the reference video, how is the visual quality of this video? Ignore whether the change happens.<br><span class="ko">기준 영상과 비교해 이 영상의 화질은 어떤가요? 변화가 일어났는지는 무시하세요.</span></p>
+        <div class="legend"><b>1</b><span>Much worse <span class="ko">· 훨씬 나쁨</span></span><b>3</b><span>Same as the reference <span class="ko">· 기준 영상과 비슷함</span></span><b>5</b><span>Much better <span class="ko">· 훨씬 좋음</span></span></div>
+      </div>
+      <div class="panel qcard">
+        <h3>2. Transition naturalness <span class="ko">· 변화의 자연스러움</span></h3>
+        <p class="q small">How naturally does this video show the change described in the sentence?<br><span class="ko">이 영상은 문장에 적힌 변화를 얼마나 자연스럽게 보여주나요?</span></p>
+        <div class="legend"><b>1</b><span>No change <span class="ko">· 변화 없음</span></span><b>3</b><span>The requested change is visible <span class="ko">· 요청한 변화가 보임</span></span><b>5</b><span>Very natural change <span class="ko">· 매우 자연스러운 변화</span></span></div>
+      </div>
+    </div>
+    <div class="row">
+      <button type="button" class="btn primary" id="startBtn">Start · 시작하기</button>
+      <span class="small ko">Your ratings are used only for research. Your name and phone number are optional. · 평가 응답은 연구 목적으로만 사용되며, 성함과 전화번호 입력은 선택입니다.</span>
+    </div>
+  </section>
+
+  <section id="trial" class="stack" hidden>
+    <div class="top"><span class="count" id="count">1 / 20</span><div class="bar"><i id="barFill"></i></div></div>
+    <div class="panel prompt"><span class="lab">Sentence · 문장</span><span class="txt" id="promptTxt"></span></div>
+    <div class="ref" id="refBox">
+      <div class="vlab"><span>Reference · 기준 영상</span></div>
+      <div class="stage" id="slotRef"><div class="wait">Loading · 불러오는 중</div></div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Video A or B">
+      <button type="button" role="tab" id="tabL" aria-selected="true">A<span class="tick" id="tickL"></span></button>
+      <button type="button" role="tab" id="tabR" aria-selected="false">B<span class="tick" id="tickR"></span></button>
+    </div>
+    <div class="vids" id="vids" data-show="L">
+      <div class="side" data-side="L">
+        <div class="vlab"><b>A</b></div>
+        <div class="stage" id="slotL"><div class="wait">Loading · 불러오는 중</div></div>
+        <fieldset class="rate"><legend>Visual quality <span class="ko">· 화질</span></legend>
+          <div class="scale" data-side="L" data-q="q"></div>
+          <div class="anchors"><span>Much worse<br>훨씬 나쁨</span><span>Same as the reference<br>기준 영상과 비슷함</span><span>Much better<br>훨씬 좋음</span></div></fieldset>
+        <fieldset class="rate"><legend>Transition naturalness <span class="ko">· 변화의 자연스러움</span></legend>
+          <div class="scale" data-side="L" data-q="t"></div>
+          <div class="anchors"><span>No change<br>변화 없음</span><span>The requested change is visible<br>요청한 변화가 보임</span><span>Very natural<br>매우 자연스러움</span></div></fieldset>
+        <button type="button" class="btn mobile-only" id="goB">Go to video B · B 영상으로</button>
+      </div>
+      <div class="side" data-side="R">
+        <div class="vlab"><b>B</b></div>
+        <div class="stage" id="slotR"><div class="wait">Loading · 불러오는 중</div></div>
+        <fieldset class="rate"><legend>Visual quality <span class="ko">· 화질</span></legend>
+          <div class="scale" data-side="R" data-q="q"></div>
+          <div class="anchors"><span>Much worse<br>훨씬 나쁨</span><span>Same as the reference<br>기준 영상과 비슷함</span><span>Much better<br>훨씬 좋음</span></div></fieldset>
+        <fieldset class="rate"><legend>Transition naturalness <span class="ko">· 변화의 자연스러움</span></legend>
+          <div class="scale" data-side="R" data-q="t"></div>
+          <div class="anchors"><span>No change<br>변화 없음</span><span>The requested change is visible<br>요청한 변화가 보임</span><span>Very natural<br>매우 자연스러움</span></div></fieldset>
+      </div>
+    </div>
+    <div class="foot">
+      <button type="button" class="btn" id="replayBtn">Replay · 다시 재생</button>
+      <span class="hint" id="hint"></span>
+      <button type="button" class="btn primary" id="nextBtn" disabled>Next · 다음</button>
+    </div>
+  </section>
+
+  <section id="done" class="stack" hidden>
+    <div class="panel stack">
+      <h2>All done. Thank you! <span class="ko">· 모두 끝났습니다. 감사합니다!</span></h2>
+      <p>Open the submission form and press Submit. The form opens with your response code already filled in. If the field is empty, copy the code below and paste it. Your answers reach us only when you submit the form.<br><span class="ko">제출 폼을 열고 제출 버튼을 눌러 주세요. 폼을 열면 응답 코드가 자동으로 입력되어 있습니다. 칸이 비어 있으면 아래 코드를 복사해 붙여넣어 주세요. 폼을 제출해야 응답이 전달됩니다.</span></p>
+      <p class="raffle-note">To join the coffee draw, enter your name and phone number in the form before you submit.<br><span class="ko">커피 추첨에 참여하시려면 폼에 성함과 전화번호를 입력한 뒤 제출해 주세요.</span></p>
+      <p id="formRow"><a class="btn primary" id="formLink" href="#" target="_blank" rel="noopener">Open the submission form · 제출 폼 열기</a></p>
+      <div class="code" id="codeBox"></div>
+      <div class="row">
+        <button type="button" class="btn" id="copyBtn">Copy code · 코드 복사</button>
+        <span class="hint" id="copyMsg"></span>
+      </div>
+      <p class="small ko" id="formMissing" hidden>The submission form link will appear here. · 제출 폼 링크가 여기에 표시될 예정입니다.</p>
+    </div>
+  </section>
+</main>
+
+<script id="core">
+/* Pure helpers (no DOM). The response code is decoded by decode_codes.py; keep the two in step. */
+const TRIALS = [{"id": "t01", "prompt": "A gemstone changes from dull to bright.", "ref": "v/6f2c627bf322.mp4", "x": "v/9545ee889fe4.mp4", "y": "v/e339a930d55d.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t02", "prompt": "A rose's petals shifting from white to a deep crimson as it blooms.", "ref": "v/593947eaa099.mp4", "x": "v/9bf1ca118783.mp4", "y": "v/56671509bb0a.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t03", "prompt": "A flower changes from purple to orange.", "ref": "v/4ea9f376bc25.mp4", "x": "v/310aec9a72f2.mp4", "y": "v/01f743c20f56.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t04", "prompt": "A mailbox with winter snow turning to spring bloom.", "ref": "v/985f2a095ee8.mp4", "x": "v/64c75d32fe61.mp4", "y": "v/581559e2d153.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t05", "prompt": "A lantern glowing brighter as the flame is turned up.", "ref": "v/c44acf25e346.mp4", "x": "v/134bb18fbdb1.mp4", "y": "v/1e2e6470ff1f.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t06", "prompt": "A sculpture transforming from ice to bronze.", "ref": "v/77cae07cb579.mp4", "x": "v/86eab5c34e7e.mp4", "y": "v/655c78f6d824.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t07", "prompt": "A bird's feathers shifting hues from grey to a brilliant blue.", "ref": "v/43f26e85df08.mp4", "x": "v/050c84e0164b.mp4", "y": "v/990d381df22f.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t08", "prompt": "A wall changes from yellow to grey.", "ref": "v/1788260df254.mp4", "x": "v/add93b041641.mp4", "y": "v/5ed835c719c2.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t09", "prompt": "A lamp changes from dim to bright.", "ref": "v/37a706762832.mp4", "x": "v/de1b320a88ea.mp4", "y": "v/2cd59ddbef12.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t10", "prompt": "A statue morphing from marble to gold.", "ref": "v/1dcd761e07cb.mp4", "x": "v/a92fdbc52933.mp4", "y": "v/96727fed0bb9.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t11", "prompt": "The sky changes from bright to dark.", "ref": "v/59ece8e3574f.mp4", "x": "v/c029855dbf55.mp4", "y": "v/e794dcb0b82e.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t12", "prompt": "An empty road in the desert changing from the clear, bright daylight to a starry night.", "ref": "v/f5ec01088475.mp4", "x": "v/29092e416788.mp4", "y": "v/59ba5c906158.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t13", "prompt": "A screen changes from dark to bright.", "ref": "v/9ec04350cc17.mp4", "x": "v/d684b600e612.mp4", "y": "v/5ee39ed89edd.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t14", "prompt": "A car changes from white to red.", "ref": "v/fdf057e485b6.mp4", "x": "v/fd0b4f859933.mp4", "y": "v/1894d9855162.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t15", "prompt": "A pair of shoes changes from red to yellow.", "ref": "v/68b43eaabe17.mp4", "x": "v/13e7eb04b39b.mp4", "y": "v/142c78068577.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t16", "prompt": "A butterfly's wings change from white to yellow.", "ref": "v/7a675fd11a32.mp4", "x": "v/bbb3cf00377c.mp4", "y": "v/505b4ed3d99e.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t17", "prompt": "The moon changes from yellow to silver.", "ref": "v/9e18c37ee1e2.mp4", "x": "v/b4a3926271f2.mp4", "y": "v/20b88e9e7bb8.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t18", "prompt": "A seashell changes from beige to pink.", "ref": "v/ee6f79ded9f2.mp4", "x": "v/e771ad783715.mp4", "y": "v/228a8a9e1df7.mp4", "w": 768, "h": 512, "g": "l"}];
+const BUILD = "59658aa0";
+const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdMcqWIqEVaqchjsUfSSJXvQUxn0lbSmlUFCQGsGW8yeq1dLg/viewform";
+const FORM_ENTRY = "entry.1648280773";   // Google Form field id, used to pre-fill the code
+const DRAFT = false;
+const CODE_VER = 'US3';
+const REPEATS = 2;          // one Wan2.2 and one LTX-2.3 trial are shown again later with A and B swapped (consistency check)
+function checksum(s){ let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 1679616; return h.toString(36).padStart(4, '0'); }
+/* Code = US3 + nonce(4) + layout(1: d = desktop, m = phone)
+   + per trial in TRIALS order: position of its first showing (base36) + side (1 = x on the left / tab A) + ratings xq xt yq yt (1-5, 0 = missing) + seconds (base36, 2 chars, max 1295)
+   + per repeat: trial index (base36) + position (base36) + ratings xq xt yq yt + seconds (the repeat shows the opposite side)
+   + checksum(4). */
+function encodeCode(S){
+  const pos = (i, rep) => S.seq.findIndex(q => q.i === i && !!q.rep === rep);
+  const part = (r, ms) => `${r.xq || 0}${r.xt || 0}${r.yq || 0}${r.yt || 0}` + Math.min(1295, Math.max(0, Math.round((ms || 0) / 1000))).toString(36).padStart(2, '0');
+  let body = '';
+  TRIALS.forEach((t, i) => { body += pos(i, false).toString(36) + String(S.sides[i]) + part(S.r[t.id] || {}, S.tms[t.id]); });
+  const reps = S.seq.filter(q => q.rep);
+  for (let k = 0; k < REPEATS; k++) {
+    const q = reps[k], t = q && TRIALS[q.i];
+    body += q ? q.i.toString(36) + pos(q.i, true).toString(36) + part(S.r2[t.id] || {}, S.tms2[t.id]) : 'zz000000';
+  }
+  const s = CODE_VER + S.nonce + (S.layout === 'm' ? 'm' : 'd') + body;
+  return s + checksum(s);
+}
+/* Sequence: the trials shuffled, then one Wan2.2 and one LTX-2.3 trial from the first 11 are shown again at least 6 trials later. */
+function makeSeq(rnd){
+  const order = TRIALS.map((t, i) => i);
+  for (let i = order.length - 1; i > 0; i--) { const j = rnd(i + 1); [order[i], order[j]] = [order[j], order[i]]; }
+  const seq = order.map(i => ({i, rep: 0}));
+  const picks = [];
+  for (const g of ['w', 'l']) {
+    const cand = seq.slice(0, 11).filter(q => TRIALS[q.i].g === g);
+    if (cand.length && picks.length < REPEATS) picks.push(cand[rnd(cand.length)].i);
+  }
+  for (const i of picks) {
+    const lo = seq.findIndex(q => q.i === i && !q.rep) + 6;
+    seq.splice(Math.min(seq.length, lo + rnd(Math.max(1, seq.length - lo + 1))), 0, {i, rep: 1});
+  }
+  return seq;
+}
+function newState(rnd, layout){
+  return { ver: BUILD, n: TRIALS.length + REPEATS, nonce: Array.from({length: 4}, () => rnd(36).toString(36)).join(''), layout: layout === 'm' ? 'm' : 'd',
+           seq: makeSeq(rnd), sides: TRIALS.map(() => rnd(2)), idx: 0, r: {}, r2: {}, tms: {}, tms2: {}, cur: {L: {}, R: {}}, done: false };
+}
+</script>
+<script>
+(() => {
+  const KEY = 'us061_' + BUILD;
+  const N = TRIALS.length + REPEATS;
+  const $ = id => document.getElementById(id);
+  const rnd = n => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; };
+  const phone = window.matchMedia('(max-width: 760px)');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const store = {
+    get(){ try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); return s && s.ver === BUILD && s.n === N && Array.isArray(s.seq) ? s : null; } catch (e) { return null; } },
+    set(s){ try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} },
+    clear(){ try { localStorage.removeItem(KEY); } catch (e) {} }
+  };
+  let S = store.get();
+  let tStart = 0, vids = [], blocked = false;
+  const pool = new Map();
+
+  document.querySelectorAll('.nTr').forEach(e => { e.textContent = N; });
+  document.querySelectorAll('.scale').forEach(box => {
+    const side = box.dataset.side, q = box.dataset.q;
+    for (let v = 1; v <= 5; v++) {
+      const id = `r-${side}-${q}-${v}`;
+      box.insertAdjacentHTML('beforeend', `<input type="radio" name="r-${side}-${q}" id="${id}" value="${v}"><label for="${id}">${v}</label>`);
+    }
+  });
+
+  function show(name){ ['intro', 'trial', 'done'].forEach(s => { $(s).hidden = s !== name; }); window.scrollTo(0, 0); }
+
+  function video(src){
+    let v = pool.get(src);
+    if (!v) {
+      v = document.createElement('video');
+      v.muted = true; v.defaultMuted = true; v.playsInline = true; v.preload = 'auto';
+      v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+      v.disablePictureInPicture = true; v.disableRemotePlayback = true;
+      v.src = src; pool.set(src, v);
+    }
+    return v;
+  }
+  /* Phones (iOS in particular) load a video only after play() is called from a tap; start it detached, pause it until it is shown. */
+  function warm(v){ const p = v.play(); if (p && p.then) p.then(() => { if (!v.isConnected) v.pause(); }).catch(() => {}); }
+  function trialSrcs(k){ const q = S.seq[k], t = q && TRIALS[q.i]; return t ? [t.ref, t.x, t.y] : []; }
+  function prune(){
+    const keep = new Set([...trialSrcs(S.idx), ...trialSrcs(S.idx + 1)]);
+    for (const [src, v] of pool) if (!keep.has(src)) { v.removeAttribute('src'); v.load(); pool.delete(src); }
+  }
+  function ready(v){
+    return new Promise(res => {
+      if (v.readyState >= 4) return res();
+      const done = () => { v.removeEventListener('canplaythrough', done); clearTimeout(tm); res(); };
+      const tm = setTimeout(done, 8000);
+      v.addEventListener('canplaythrough', done);
+    });
+  }
+  function active(){ return phone.matches ? [vids[0], $('vids').dataset.show === 'R' ? vids[2] : vids[1]] : vids; }
+  function cover(){ return Object.assign(document.createElement('div'), {className: 'wait', textContent: 'Loading · 불러오는 중'}); }
+  function uncover(v){ const w = v.parentElement && v.parentElement.querySelector('.wait'); if (w) w.remove(); }
+  function covered(v){ return !!(v.parentElement && v.parentElement.querySelector('.wait')); }
+  async function switchTo(side){                   // phone tabs; called from a tap
+    setTab(side);
+    const v = side === 'R' ? vids[2] : vids[1];
+    if (v && covered(v)) {
+      const p = v.play(); if (p && p.catch) p.catch(() => {});
+      await ready(v);
+      if ($('vids').dataset.show !== side || !vids.includes(v)) return;
+      uncover(v);
+    }
+    playAll();
+  }
+  function playAll(){
+    vids.forEach(v => { try { v.pause(); v.currentTime = 0; } catch (e) {} });
+    const ps = active().map(v => { try { return v.play(); } catch (e) { return Promise.reject(e); } });
+    Promise.all(ps.map(p => (p && p.then) ? p.then(() => true, err => !(err && err.name === 'NotAllowedError')) : true))
+      .then(oks => { blocked = oks.includes(false); update(); });
+  }
+  function kick(){ playAll(); trialSrcs(S.idx + 1).map(video).forEach(warm); }   // call from inside a tap or click
+  function setTab(side){
+    $('vids').dataset.show = side;
+    $('tabL').setAttribute('aria-selected', String(side === 'L'));
+    $('tabR').setAttribute('aria-selected', String(side === 'R'));
+  }
+
+  async function showTrial(){
+    const q = S.seq[S.idx], ti = q.i, t = TRIALS[ti], xLeft = (S.sides[ti] === 1) !== !!q.rep, myS = S, myIdx = S.idx;
+    $('count').textContent = `${S.idx + 1} / ${N}`;
+    $('barFill').style.width = `${(S.idx / N) * 100}%`;
+    $('promptTxt').textContent = t.prompt;
+    const ar = `${t.w} / ${t.h}`;
+    const ref = video(t.ref), L = video(xLeft ? t.x : t.y), R = video(xLeft ? t.y : t.x);
+    [ref, L, R].forEach(v => { v.onended = null; v.ontimeupdate = null; v.loop = false; });
+    [['slotRef', ref], ['slotL', L], ['slotR', R]].forEach(([s, v]) => { const el = $(s); el.style.setProperty('--ar', ar); el.replaceChildren(v, cover()); });
+    document.querySelectorAll('.scale input').forEach(inp => {
+      const side = inp.name.split('-')[1], q = inp.name.split('-')[2];
+      inp.checked = String(S.cur[side][q] || '') === inp.value;
+    });
+    setTab('L');
+    vids = [ref, L, R]; blocked = false;
+    tStart = Date.now();
+    show('trial');
+    update();
+    trialSrcs(S.idx + 1).forEach(video);
+    prune();
+    const act = active();
+    await Promise.all(act.map(ready));                                   // on a phone the hidden B side loads when its tab is opened
+    if (S !== myS || S.idx !== myIdx || $('trial').hidden) return;     // moved on or reset while loading
+    act.forEach(uncover);
+    ref.onended = () => { playAll(); };
+    ref.ontimeupdate = () => { for (const v of [L, R]) if (!v.paused && Math.abs(v.currentTime - ref.currentTime) > 0.2) { try { v.currentTime = ref.currentTime; } catch (e) {} } };
+    playAll();
+  }
+
+  function sideDone(s){ const c = S.cur[s]; return !!(c.q && c.t); }
+  function update(){
+    if (!S || !S.cur || $('trial').hidden) return;
+    const l = sideDone('L'), r = sideDone('R');
+    $('tickL').textContent = l ? '✓' : ''; $('tickR').textContent = r ? '✓' : '';
+    $('nextBtn').disabled = !(l && r);
+    $('replayBtn').classList.toggle('primary', blocked);
+    $('hint').textContent = blocked ? 'If the videos do not play, tap Replay · 영상이 재생되지 않으면 다시 재생을 눌러 주세요'
+      : (l && r) ? '' : (!l && !r) ? 'Rate A and B on both questions · A와 B 모두 두 질문에 답해 주세요'
+      : !l ? 'Video A still needs ratings · A 영상 평가가 남았습니다' : 'Video B still needs ratings · B 영상 평가가 남았습니다';
+  }
+  function addTime(){ if (S && !S.done && tStart && !$('trial').hidden) { const q = S.seq[S.idx], t = TRIALS[q.i], bag = q.rep ? S.tms2 : S.tms; bag[t.id] = (bag[t.id] || 0) + (Date.now() - tStart); tStart = Date.now(); store.set(S); } }
+
+  function next(){
+    if ($('nextBtn').disabled) return;
+    addTime();
+    const q = S.seq[S.idx], ti = q.i, t = TRIALS[ti], xLeft = (S.sides[ti] === 1) !== !!q.rep, c = S.cur;
+    const X = xLeft ? c.L : c.R, Y = xLeft ? c.R : c.L;
+    (q.rep ? S.r2 : S.r)[t.id] = { xq: +X.q, xt: +X.t, yq: +Y.q, yt: +Y.t };
+    S.idx += 1; S.cur = {L: {}, R: {}};
+    vids.forEach(v => { try { v.pause(); } catch (e) {} });
+    tStart = 0;
+    if (S.idx >= N) { S.done = true; store.set(S); showDone(); return; }
+    store.set(S);
+    showTrial(); kick();
+  }
+
+  function showDone(){
+    pool.forEach(v => { v.removeAttribute('src'); v.load(); }); pool.clear();
+    $('codeBox').textContent = encodeCode(S);
+    if (FORM_URL) {
+      $('formLink').href = FORM_ENTRY ? `${FORM_URL}?usp=pp_url&${FORM_ENTRY}=${encodeURIComponent($('codeBox').textContent)}` : FORM_URL;
+      $('formRow').hidden = false; $('formMissing').hidden = true;
+    } else { $('formRow').hidden = true; $('formMissing').hidden = false; }
+    show('done');
+  }
+
+  function showIntro(){
+    const resume = S && !S.done && S.idx > 0;
+    $('startBtn').textContent = resume ? `Continue (${S.idx + 1} / ${N}) · 이어서 하기` : 'Start · 시작하기';
+    show('intro');
+  }
+
+  document.addEventListener('change', e => {
+    const inp = e.target;
+    if (!inp.matches || !inp.matches('.scale input') || !S) return;
+    const [, side, q] = inp.name.split('-');
+    S.cur[side][q] = +inp.value; store.set(S); update();
+  });
+  $('startBtn').addEventListener('click', () => {
+    if (!S) { S = newState(rnd, phone.matches ? 'm' : 'd'); store.set(S); }
+    showTrial(); kick();
+  });
+  $('tabL').addEventListener('click', () => { switchTo('L'); });
+  $('tabR').addEventListener('click', () => { switchTo('R'); });
+  $('goB').addEventListener('click', () => {
+    switchTo('R');
+    $('refBox').scrollIntoView({block: 'start', behavior: reduceMotion.matches ? 'auto' : 'smooth'});
+  });
+  const onLayout = () => {                         // rotation across the phone breakpoint
+    if ($('trial').hidden || !vids.length) return;
+    const act = active(), cur = vids;
+    act.forEach(v => { const p = v.play(); if (p && p.catch) p.catch(() => {}); });
+    Promise.all(act.map(ready)).then(() => { if (vids === cur) { act.forEach(uncover); playAll(); } });
+  };
+  if (phone.addEventListener) phone.addEventListener('change', onLayout); else if (phone.addListener) phone.addListener(onLayout);
+  $('replayBtn').addEventListener('click', () => { if ($('slotRef').querySelector('video')) playAll(); });
+  $('nextBtn').addEventListener('click', next);
+  $('copyBtn').addEventListener('click', () => {
+    const code = $('codeBox').textContent;
+    const selectIt = () => { const r = document.createRange(); r.selectNodeContents($('codeBox')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+    const ok = () => { $('copyMsg').textContent = 'Copied · 복사됨'; };
+    const fail = () => { selectIt(); $('copyMsg').textContent = 'The code is selected. Copy it with Ctrl+C (⌘C) or long-press. · 코드가 선택되었습니다. Ctrl+C(⌘C) 또는 길게 눌러 복사해 주세요.'; };
+    try { navigator.clipboard.writeText(code).then(ok, fail); } catch (e) { fail(); }
+  });
+  window.addEventListener('pagehide', addTime);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') addTime(); else if (tStart) tStart = Date.now(); });
+  if (DRAFT) {
+    $('draftNote').hidden = false;
+    $('resetBtn').addEventListener('click', () => { store.clear(); S = null; vids.forEach(v => { try { v.pause(); } catch (e) {} }); showIntro(); });
+  }
+  function hashReset(){                            // testers: open the link with #reset to start over
+    if (location.hash !== '#reset') return false;
+    store.clear(); S = null; vids.forEach(v => { try { v.pause(); } catch (e) {} });
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    showIntro(); return true;
+  }
+  window.addEventListener('hashchange', hashReset);
+  if (!hashReset()) { if (S && S.done) showDone(); else showIntro(); }
+})();
+</script>
+</body>
+</html>
