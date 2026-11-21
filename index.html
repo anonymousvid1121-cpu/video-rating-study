@@ -127,7 +127,7 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
 .exrow .vlab b{font-size:16px}
 .exvids{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
 .excap{display:grid;gap:8px;align-content:start;font-size:15px;padding-top:4px}
-.excap .arrow{font-weight:600}
+.excap .exhint{font-weight:600;display:grid;gap:2px}
 .exnav{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center}
 /* done */
 .code{font-family:var(--mono);font-size:15px;line-height:1.6;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;user-select:all;-webkit-user-select:all}
@@ -212,7 +212,8 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
     </div>
     <div class="caution">
       <p><b><span class="l-ko">주의</span><span class="l-en">Note</span></b></p>
-      <p><span class="l-ko">이 연구는 영상 편집(editing)이 아니라 영상 생성(generation) 연구입니다. 기준 영상과 A, B는 같은 문장과 같은 seed(생성 시작점)로 만들어서 비슷해 보일 뿐, 기준 영상을 고친 결과가 아닙니다. 그래서 기준 영상과 달라 보인다는 이유만으로 퀄리티가 낮은 것은 아닙니다. 퀄리티는 영상 자체에 이상한 artifact가 있는지로 평가해 주세요.</span><span class="l-en">This study is about video generation, not video editing. The reference and videos A and B look alike only because they were generated from the same sentence and the same seed (starting point). They are not edits of the reference. So a video is not lower in quality just because it looks different from the reference. Judge quality by whether the video itself shows strange artifacts.</span></p>
+      <p><span class="l-ko">이 연구는 영상 편집(editing)이 아니라 영상 생성(generation) 연구입니다. 기준 영상과 A, B는 같은 문장과 같은 seed(생성 시작점)로 만들어서 비슷해 보일 뿐, 기준 영상을 고친 결과가 아닙니다. 퀄리티는 영상 자체에 이상한 artifact가 있는지 등으로 평가해 주세요.</span><span class="l-en">This study is about video generation, not video editing. The reference and videos A and B look alike only because they were generated from the same sentence and the same seed (starting point). They are not edits of the reference. Judge quality by things like whether the video itself shows strange artifacts.</span></p>
+      <p><span class="l-ko">(ours가 구도를 바꾼다는 뜻은 아닙니다!)</span><span class="l-en">(This does not mean that our method changes the composition!)</span></p>
     </div>
     <div class="exgroup" id="exGood"><div class="exhead"><span class="badge good">✓ <span class="l-ko">좋은 예시</span><span class="l-en">Good examples</span></span></div></div>
     <div class="exgroup" id="exBad"><div class="exhead"><span class="badge bad">✗ <span class="l-ko">나쁜 예시</span><span class="l-en">Bad examples</span></span></div></div>
@@ -293,7 +294,7 @@ const BUILD = "945c7a99";
 const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdMcqWIqEVaqchjsUfSSJXvQUxn0lbSmlUFCQGsGW8yeq1dLg/viewform";
 const FORM_ENTRY = "entry.1648280773";   // Google Form field id, used to pre-fill the code
 const FORM_CONTACT = "entry.2075668069";   // Google Form field for the optional "name, phone" (coffee draw), pre-filled when given on the first page
-const EXAMPLES = [{"slot": "good1", "kind": "good", "n": 1, "prompt": "A lake's surface transforming from a frozen ice sheet to liquid water.", "ko": "호수 표면이 얼어붙은 얼음판에서 물로 바뀐다.", "pa": "a frozen ice sheet", "pb": "liquid water", "ka": "얼어붙은 얼음판", "kb": "물", "ref": "v/29a76a716f5f.mp4", "ex": "v/ea79907ed816.mp4", "w": 768, "h": 512, "cap": ["장면이 기준 영상과 비슷하게 유지되면서 문장의 변화가 자연스럽게 일어납니다. 이상한 artifact도 없습니다.", "The scene stays close to the reference while the described change happens naturally. There are no strange artifacts."], "hint": ["변화의 자연스러움은 높은 점수, 영상 퀄리티는 기준 영상과 비슷하면 3점입니다.", "High transition naturalness. Video quality is 3 when it matches the reference."]}, {"slot": "good2", "kind": "good", "n": 2, "prompt": "A car changes from golden to white.", "ko": "자동차가 금색에서 흰색으로 바뀐다.", "pa": "golden", "pb": "white", "ka": "금색", "kb": "흰색", "ref": "v/702364ca08b9.mp4", "ex": "v/acf54ca7386c.mp4", "w": 768, "h": 512, "cap": ["장면은 기준 영상과 꽤 다르지만, 문장의 변화가 자연스럽게 일어나고 이상한 artifact도 없습니다.", "The scene looks quite different from the reference, but the described change happens naturally and there are no strange artifacts."], "hint": ["변화의 자연스러움은 높은 점수입니다. 기준 영상과 다르다는 이유만으로 영상 퀄리티를 낮추지 마세요.", "High transition naturalness. Do not lower the video quality just because the video differs from the reference."]}];   // good / bad example videos shown once after Start (build_study.py from examples.json); they carry no ratings
+const EXAMPLES = [{"slot": "good1", "kind": "good", "n": 1, "prompt": "A lake's surface transforming from a frozen ice sheet to liquid water.", "ko": "호수 표면이 얼어붙은 얼음판에서 물로 바뀐다.", "pa": "a frozen ice sheet", "pb": "liquid water", "ka": "얼어붙은 얼음판", "kb": "물", "ref": "v/29a76a716f5f.mp4", "ex": "v/ea79907ed816.mp4", "w": 768, "h": 512, "cap": ["장면이 기준 영상과 비슷하게 유지되면서 문장의 변화가 자연스럽게 일어납니다. 이상한 artifact도 없습니다.", "The scene stays close to the reference while the described change happens naturally. There are no strange artifacts."], "hint": [["자연스러움: 높은 점수", "영상 퀄리티: 기준 영상과 비슷하다고 생각된다면 3점"], ["Naturalness: high score", "Video quality: 3 if you think it is similar to the reference"]]}, {"slot": "good2", "kind": "good", "n": 2, "prompt": "A car changes from golden to white.", "ko": "자동차가 금색에서 흰색으로 바뀐다.", "pa": "golden", "pb": "white", "ka": "금색", "kb": "흰색", "ref": "v/702364ca08b9.mp4", "ex": "v/acf54ca7386c.mp4", "w": 768, "h": 512, "cap": ["장면은 기준 영상과 꽤 다르지만, 문장의 변화가 자연스럽게 일어나고 이상한 artifact도 없습니다.", "The scene looks quite different from the reference, but the described change happens naturally and there are no strange artifacts."], "hint": [["자연스러움: 높은 점수", "영상 퀄리티: 기준 영상과 비슷하다고 생각된다면 3점"], ["Naturalness: high score", "Video quality: 3 if you think it is similar to the reference"]]}];   // good / bad example videos shown once after Start (build_study.py from examples.json); they carry no ratings
 const DRAFT = false;
 const CODE_VER = 'US3';
 const REPEATS = 1;   // trials shown a second time later with A and B swapped (consistency check)
@@ -504,12 +505,14 @@ function newState(rnd, layout){
         <div class="exvids">
           <div class="refcol"><div class="vlab"><b><span class="l-ko">기준 영상</span><span class="l-en">Reference</span></b></div><div class="stage"></div>${CTL_HTML}</div>
           <div class="refcol"><div class="vlab"><b><span class="l-ko">예시 영상</span><span class="l-en">Example video</span></b></div><div class="stage"></div>${CTL_HTML}</div>
-          <div class="excap"><p></p><p class="arrow"></p></div>
+          <div class="excap"><p></p><div class="exhint"></div></div>
         </div>`;
       const [pe, pk] = art.querySelectorAll('.ptxt p'); pe.append(hl(e.prompt, e.pa, e.pb)); pk.append(hl(e.ko || '', e.ka, e.kb));
-      const [c1, c2] = art.querySelectorAll('.excap p');
-      c1.append(txt('l-ko', e.cap[0]), txt('l-en', e.cap[1])); c2.append(txt('l-ko', '→ ' + e.hint[0]), txt('l-en', '→ ' + e.hint[1]));
-      c2.hidden = !e.hint[0];
+      const c1 = art.querySelector('.excap p'), c2 = art.querySelector('.exhint');
+      c1.append(txt('l-ko', e.cap[0]), txt('l-en', e.cap[1]));
+      const lines = (cls, ls) => { const d = document.createElement('div'); d.className = cls; (ls || []).forEach(l => { const p = document.createElement('p'); p.textContent = l; d.append(p); }); return d; };
+      c2.append(lines('l-ko', e.hint[0]), lines('l-en', e.hint[1]));      // one line per rating question
+      c2.hidden = !(e.hint[0] || []).length;
       art.querySelectorAll('.stage').forEach(s => s.style.setProperty('--ar', `${e.w} / ${e.h}`));
       $(good ? 'exGood' : 'exBad').append(art);
       exRows.push({e, art, ref: null, ex: null, on: true, vis: false, scrub: false});
