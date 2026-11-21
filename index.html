@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
 <style>
-/* Layout: an evaluation bench. Sentence strip on top (English | Korean, start and target states highlighted), the reference centred,
-   A and B side by side, each with a shared time bar and its own two rating rails. One interface language at a time (Korean by default).
+/* Layout: an evaluation bench. Sentence strip on top (English | Korean, start and target states highlighted), then one row of three
+   videos (reference | A | B), each with a shared time bar; A and B carry their own two rating rails. One interface language at a time (Korean by default).
    Phone (<=760px): the reference stays on top and A / B are shown one at a time under tabs; the Back / Next bar sticks to the bottom. */
 :root{
   --bg:#eef0ee; --surface:#ffffff; --ink:#1a1d1b; --mute:#5c625e; --line:#d5d9d5;
@@ -78,8 +78,8 @@ mark.sa{background:var(--sa)}
 mark.sb{background:var(--sb)}
 .plegend{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--mute)}
 .plegend mark{font-weight:500}
-.vids{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.ref{width:min(100%,calc((100% - 16px)/2));margin:0 auto;display:grid;gap:6px;scroll-margin-top:8px}
+.vids{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.refcol{display:grid;gap:6px;align-content:start;min-width:0;scroll-margin-top:8px}
 .side{display:grid;gap:10px;align-content:start;min-width:0}
 .vlab{display:flex;justify-content:space-between;align-items:baseline}
 .vlab b{font-size:20px;letter-spacing:0;color:var(--ink);text-transform:none}
@@ -120,8 +120,7 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
   h1{font-size:22px}
   .panel{padding:12px 14px}
   .ptxt p{font-size:17px}
-  .vids{grid-template-columns:1fr}
-  .ref{width:100%}
+  .vids{grid-template-columns:1fr;gap:12px}
   .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .vids[data-show="L"] .side[data-side="R"],.vids[data-show="R"] .side[data-side="L"]{display:none}
   .side .vlab{display:none}
@@ -159,7 +158,7 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
     </div>
     <div class="qcards">
       <div class="panel qcard">
-        <h3><span class="l-ko">1. 영상 퀄리티</span><span class="l-en">1. Video quality</span></h3>
+        <h3><span class="l-ko">1. 영상 퀄리티 (이상한 artifact들이 있는지 등)</span><span class="l-en">1. Video quality (e.g., strange artifacts)</span></h3>
         <p class="q small"><span class="l-ko">기준 영상과 비교해 이 영상의 퀄리티는 어떤가요? 변화가 일어났는지는 무시하세요.</span><span class="l-en">Compared with the reference video, how is the quality of this video? Ignore whether the change happens.</span></p>
         <div class="legend"><b>1</b><span><span class="l-ko">훨씬 나쁨</span><span class="l-en">Much worse</span></span><b>3</b><span><span class="l-ko">기준 영상과 비슷함</span><span class="l-en">Same as the reference</span></span><b>5</b><span><span class="l-ko">훨씬 좋음</span><span class="l-en">Much better</span></span></div>
       </div>
@@ -182,21 +181,21 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
       <div class="ptxt"><p id="promptTxt" lang="en"></p><p id="promptKo" lang="ko"></p></div>
       <div class="plegend"><mark class="sa"><span class="l-ko">시작 상태</span><span class="l-en">Start state</span></mark><mark class="sb"><span class="l-ko">목표 상태</span><span class="l-en">Target state</span></mark></div>
     </div>
-    <div class="ref" id="refBox">
-      <div class="vlab"><span><span class="l-ko">기준 영상 (Reference)</span><span class="l-en">Reference</span></span></div>
-      <div class="stage" id="slotRef"><div class="wait"></div></div>
-      <div class="ctl"><button type="button" class="pp">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0"><span class="tm">0.0 / 5.0 s</span></div>
-    </div>
-    <div class="tabs" role="tablist" aria-label="A / B">
-      <button type="button" role="tab" id="tabL" aria-selected="true">A<span class="tick" id="tickL"></span></button>
-      <button type="button" role="tab" id="tabR" aria-selected="false">B<span class="tick" id="tickR"></span></button>
-    </div>
     <div class="vids" id="vids" data-show="L">
+      <div class="refcol" id="refBox">
+        <div class="vlab"><b><span class="l-ko">기준 영상</span><span class="l-en">Reference</span></b></div>
+        <div class="stage" id="slotRef"><div class="wait"></div></div>
+        <div class="ctl"><button type="button" class="pp">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0"><span class="tm">0.0 / 5.0 s</span></div>
+      </div>
+      <div class="tabs" role="tablist" aria-label="A / B">
+        <button type="button" role="tab" id="tabL" aria-selected="true">A<span class="tick" id="tickL"></span></button>
+        <button type="button" role="tab" id="tabR" aria-selected="false">B<span class="tick" id="tickR"></span></button>
+      </div>
       <div class="side" data-side="L">
         <div class="vlab"><b>A</b></div>
         <div class="stage" id="slotL"><div class="wait"></div></div>
         <div class="ctl"><button type="button" class="pp">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0"><span class="tm">0.0 / 5.0 s</span></div>
-        <fieldset class="rate"><legend><span class="l-ko">영상 퀄리티</span><span class="l-en">Video quality</span></legend>
+        <fieldset class="rate"><legend><span class="l-ko">영상 퀄리티 (이상한 artifact들이 있는지 등)</span><span class="l-en">Video quality (e.g., strange artifacts)</span></legend>
           <div class="scale" data-side="L" data-q="q"></div>
           <div class="anchors"><span><span class="l-ko">훨씬 나쁨</span><span class="l-en">Much worse</span></span><span><span class="l-ko">기준 영상과 비슷함</span><span class="l-en">Same as the reference</span></span><span><span class="l-ko">훨씬 좋음</span><span class="l-en">Much better</span></span></div></fieldset>
         <fieldset class="rate"><legend><span class="l-ko">변화의 자연스러움</span><span class="l-en">Transition naturalness</span></legend>
@@ -208,7 +207,7 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
         <div class="vlab"><b>B</b></div>
         <div class="stage" id="slotR"><div class="wait"></div></div>
         <div class="ctl"><button type="button" class="pp">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0"><span class="tm">0.0 / 5.0 s</span></div>
-        <fieldset class="rate"><legend><span class="l-ko">영상 퀄리티</span><span class="l-en">Video quality</span></legend>
+        <fieldset class="rate"><legend><span class="l-ko">영상 퀄리티 (이상한 artifact들이 있는지 등)</span><span class="l-en">Video quality (e.g., strange artifacts)</span></legend>
           <div class="scale" data-side="R" data-q="q"></div>
           <div class="anchors"><span><span class="l-ko">훨씬 나쁨</span><span class="l-en">Much worse</span></span><span><span class="l-ko">기준 영상과 비슷함</span><span class="l-en">Same as the reference</span></span><span><span class="l-ko">훨씬 좋음</span><span class="l-en">Much better</span></span></div></fieldset>
         <fieldset class="rate"><legend><span class="l-ko">변화의 자연스러움</span><span class="l-en">Transition naturalness</span></legend>
