@@ -11,20 +11,24 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
 <style>
-/* Layout: an evaluation bench. Prompt strip on top, the reference centred, A and B side by side, each with its own two rating rails.
-   Phone (<=760px): the reference stays on top and A / B are shown one at a time under tabs; the Next bar sticks to the bottom. */
+/* Layout: an evaluation bench. Sentence strip on top (English | Korean, start and target states highlighted), the reference centred,
+   A and B side by side, each with a shared time bar and its own two rating rails.
+   Phone (<=760px): the reference stays on top and A / B are shown one at a time under tabs; the Back / Next bar sticks to the bottom. */
 :root{
   --bg:#eef0ee; --surface:#ffffff; --ink:#1a1d1b; --mute:#5c625e; --line:#d5d9d5;
   --accent:#2c56c9; --accent-ink:#ffffff; --accent-soft:#dfe7fb; --warn:#a8481f; --stage:#0b0c0c;
+  --sa:#fbe0bd; --sb:#cfe3ff;
   --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#141615; --surface:#1d201e; --ink:#e7e9e7; --mute:#9aa19c; --line:#323734;
-  --accent:#86a6ff; --accent-ink:#0c1328; --accent-soft:#25304d; --warn:#f09468; --stage:#000000; color-scheme:dark}}
+  --accent:#86a6ff; --accent-ink:#0c1328; --accent-soft:#25304d; --warn:#f09468; --stage:#000000;
+  --sa:#5a3c16; --sb:#1d3a5f; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#141615; --surface:#1d201e; --ink:#e7e9e7; --mute:#9aa19c; --line:#323734;
-  --accent:#86a6ff; --accent-ink:#0c1328; --accent-soft:#25304d; --warn:#f09468; --stage:#000000; color-scheme:dark}
+  --accent:#86a6ff; --accent-ink:#0c1328; --accent-soft:#25304d; --warn:#f09468; --stage:#000000;
+  --sa:#5a3c16; --sb:#1d3a5f; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 0}
@@ -47,7 +51,7 @@ p{margin:0}
 .btn{display:inline-block;text-decoration:none;font:inherit;font-weight:600;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px 18px;cursor:pointer;touch-action:manipulation}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
-.btn:focus-visible,.tabs button:focus-visible,.scale input:focus-visible+label,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn:focus-visible,.tabs button:focus-visible,.ctl button:focus-visible,.ctl input:focus-visible,.scale input:focus-visible+label,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .small{font-size:13px}
 .mobile-only{display:none}
@@ -58,9 +62,16 @@ p{margin:0}
 .count{font-family:var(--mono);font-size:14px;white-space:nowrap}
 .bar{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
-.prompt{display:grid;gap:4px}
+.prompt{display:grid;gap:6px}
 .prompt .lab,.vlab{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
-.prompt .txt{font-size:20px;line-height:1.4;font-weight:500}
+.ptxt{display:grid;grid-template-columns:1fr 1fr;gap:6px 28px;align-items:start}
+.ptxt p{font-size:20px;line-height:1.45;font-weight:500;min-width:0}
+.ptxt p + p{border-left:1px solid var(--line);padding-left:28px;margin-left:-14px}
+mark{color:inherit;border-radius:4px;padding:0 4px;font-weight:600;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+mark.sa{background:var(--sa)}
+mark.sb{background:var(--sb)}
+.plegend{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--mute)}
+.plegend mark{font-weight:500}
 .vids{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .ref{width:min(100%,calc((100% - 16px)/2));margin:0 auto;display:grid;gap:6px;scroll-margin-top:8px}
 .side{display:grid;gap:10px;align-content:start;min-width:0}
@@ -69,6 +80,10 @@ p{margin:0}
 .stage{position:relative;background:var(--stage);border-radius:8px;overflow:hidden;aspect-ratio:var(--ar,16/9);max-width:100%}
 .stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
 .stage .wait{position:absolute;inset:0;display:grid;place-items:center;color:#cfd3cf;font-size:13px;background:var(--stage)}
+.ctl{display:flex;align-items:center;gap:8px;min-width:0}
+.ctl .pp{flex:none;width:36px;height:30px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit;font-size:12px;cursor:pointer;touch-action:manipulation}
+.ctl .seek{flex:1;min-width:0;height:26px;accent-color:var(--accent);margin:0}
+.ctl .tm{flex:none;font-family:var(--mono);font-size:12px;color:var(--mute);white-space:nowrap;min-width:86px;text-align:right}
 .tabs{display:none}
 .tabs button{font:inherit;font-weight:600;font-size:17px;height:46px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--mute);cursor:pointer;touch-action:manipulation}
 .tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
@@ -89,12 +104,16 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
 .hint{color:var(--mute);font-size:13px;min-height:1.2em}
 /* done */
 .code{font-family:var(--mono);font-size:15px;line-height:1.6;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;user-select:all;-webkit-user-select:all}
+@media (max-width:900px){
+  .ptxt{grid-template-columns:1fr}
+  .ptxt p + p{border-left:0;padding-left:0;margin-left:0}
+}
 @media (max-width:760px){
   body{padding-block:12px 0}
   main{gap:12px}
   h1{font-size:22px}
   .panel{padding:12px 14px}
-  .prompt .txt{font-size:17px}
+  .ptxt p{font-size:17px}
   .vids{grid-template-columns:1fr}
   .ref{width:100%}
   .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -119,8 +138,8 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
       <h1>Video change rating <span class="ko">· 영상 변화 평가</span></h1>
       <div class="lede">
         <p>Thank you for taking part. In each of the <span class="nTr">20</span> trials you will see a sentence that describes a change, a reference video, and two videos labelled A and B.<br><span class="ko">참여해 주셔서 감사합니다. <span class="nTr">20</span>개 문항마다 어떤 변화를 설명하는 문장, 기준 영상 하나, 그리고 A와 B 두 영상이 나옵니다.</span></p>
-        <p>Rate A and B separately on the two questions below. There are no right or wrong answers. The study takes about 5 minutes, and you cannot go back to earlier trials.<br><span class="ko">아래 두 질문에 대해 A와 B를 각각 따로 평가해 주세요. 정답은 없습니다. 약 5분이 걸리며, 지나간 문항으로 돌아갈 수 없습니다.</span></p>
-        <p>A computer with a large browser window works best, but a phone also works. The videos have no sound and play on a loop.<br><span class="ko">큰 화면의 컴퓨터를 권장하지만 휴대폰으로도 참여할 수 있습니다. 영상에는 소리가 없고 반복 재생됩니다.</span></p>
+        <p>Rate A and B separately on the two questions below. There are no right or wrong answers. The study takes about 5 minutes, and you can return to the previous trial with the Back button.<br><span class="ko">아래 두 질문에 대해 A와 B를 각각 따로 평가해 주세요. 정답은 없습니다. 약 5분이 걸리며, 이전 버튼으로 앞 문항으로 돌아갈 수 있습니다.</span></p>
+        <p>A computer with a large browser window works best, but a phone also works. The videos have no sound and play on a loop. Moving the time bar under any video moves all three videos together.<br><span class="ko">큰 화면의 컴퓨터를 권장하지만 휴대폰으로도 참여할 수 있습니다. 영상에는 소리가 없고 반복 재생됩니다. 어느 영상이든 아래 시간 막대를 움직이면 세 영상이 함께 움직입니다.</span></p>
         <p class="mobile-only">On a phone, please use Wi-Fi because the videos total about 200 MB, and hold the phone upright. Switch between video A and video B with the A and B tabs.<br><span class="ko">휴대폰에서는 영상 용량이 약 200MB이므로 와이파이에 연결해 주시고, 휴대폰을 세로로 들어 주세요. A와 B 영상은 A/B 탭으로 번갈아 볼 수 있습니다.</span></p>
       </div>
     </div>
@@ -130,8 +149,8 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
     </div>
     <div class="qcards">
       <div class="panel qcard">
-        <h3>1. Visual quality <span class="ko">· 화질</span></h3>
-        <p class="q small">Compared with the reference video, how is the visual quality of this video? Ignore whether the change happens.<br><span class="ko">기준 영상과 비교해 이 영상의 화질은 어떤가요? 변화가 일어났는지는 무시하세요.</span></p>
+        <h3>1. Video quality <span class="ko">· 영상 퀄리티</span></h3>
+        <p class="q small">Compared with the reference video, how is the quality of this video? Ignore whether the change happens.<br><span class="ko">기준 영상과 비교해 이 영상의 퀄리티는 어떤가요? 변화가 일어났는지는 무시하세요.</span></p>
         <div class="legend"><b>1</b><span>Much worse <span class="ko">· 훨씬 나쁨</span></span><b>3</b><span>Same as the reference <span class="ko">· 기준 영상과 비슷함</span></span><b>5</b><span>Much better <span class="ko">· 훨씬 좋음</span></span></div>
       </div>
       <div class="panel qcard">
@@ -148,10 +167,15 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
 
   <section id="trial" class="stack" hidden>
     <div class="top"><span class="count" id="count">1 / 20</span><div class="bar"><i id="barFill"></i></div></div>
-    <div class="panel prompt"><span class="lab">Sentence · 문장</span><span class="txt" id="promptTxt"></span></div>
+    <div class="panel prompt">
+      <span class="lab">Sentence · 문장</span>
+      <div class="ptxt"><p id="promptTxt" lang="en"></p><p id="promptKo" lang="ko"></p></div>
+      <div class="plegend"><mark class="sa">Start state · 시작 상태</mark><mark class="sb">Target state · 목표 상태</mark></div>
+    </div>
     <div class="ref" id="refBox">
       <div class="vlab"><span>Reference · 기준 영상</span></div>
       <div class="stage" id="slotRef"><div class="wait">Loading · 불러오는 중</div></div>
+      <div class="ctl"><button type="button" class="pp" aria-label="Pause · 일시정지">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0" aria-label="Time · 시간"><span class="tm">0.0 / 5.0 s</span></div>
     </div>
     <div class="tabs" role="tablist" aria-label="Video A or B">
       <button type="button" role="tab" id="tabL" aria-selected="true">A<span class="tick" id="tickL"></span></button>
@@ -161,7 +185,8 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
       <div class="side" data-side="L">
         <div class="vlab"><b>A</b></div>
         <div class="stage" id="slotL"><div class="wait">Loading · 불러오는 중</div></div>
-        <fieldset class="rate"><legend>Visual quality <span class="ko">· 화질</span></legend>
+        <div class="ctl"><button type="button" class="pp" aria-label="Pause · 일시정지">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0" aria-label="Time · 시간"><span class="tm">0.0 / 5.0 s</span></div>
+        <fieldset class="rate"><legend>Video quality <span class="ko">· 영상 퀄리티</span></legend>
           <div class="scale" data-side="L" data-q="q"></div>
           <div class="anchors"><span>Much worse<br>훨씬 나쁨</span><span>Same as the reference<br>기준 영상과 비슷함</span><span>Much better<br>훨씬 좋음</span></div></fieldset>
         <fieldset class="rate"><legend>Transition naturalness <span class="ko">· 변화의 자연스러움</span></legend>
@@ -172,7 +197,8 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
       <div class="side" data-side="R">
         <div class="vlab"><b>B</b></div>
         <div class="stage" id="slotR"><div class="wait">Loading · 불러오는 중</div></div>
-        <fieldset class="rate"><legend>Visual quality <span class="ko">· 화질</span></legend>
+        <div class="ctl"><button type="button" class="pp" aria-label="Pause · 일시정지">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0" aria-label="Time · 시간"><span class="tm">0.0 / 5.0 s</span></div>
+        <fieldset class="rate"><legend>Video quality <span class="ko">· 영상 퀄리티</span></legend>
           <div class="scale" data-side="R" data-q="q"></div>
           <div class="anchors"><span>Much worse<br>훨씬 나쁨</span><span>Same as the reference<br>기준 영상과 비슷함</span><span>Much better<br>훨씬 좋음</span></div></fieldset>
         <fieldset class="rate"><legend>Transition naturalness <span class="ko">· 변화의 자연스러움</span></legend>
@@ -181,9 +207,9 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
       </div>
     </div>
     <div class="foot">
-      <button type="button" class="btn" id="replayBtn">Replay · 다시 재생</button>
+      <button type="button" class="btn" id="backBtn" disabled>← Back · 이전</button>
       <span class="hint" id="hint"></span>
-      <button type="button" class="btn primary" id="nextBtn" disabled>Next · 다음</button>
+      <button type="button" class="btn primary" id="nextBtn" disabled>Next · 다음 →</button>
     </div>
   </section>
 
@@ -205,14 +231,17 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
 
 <script id="core">
 /* Pure helpers (no DOM). The response code is decoded by decode_codes.py; keep the two in step. */
-const TRIALS = [{"id": "t01", "prompt": "A gemstone changes from dull to bright.", "ref": "v/6f2c627bf322.mp4", "x": "v/9545ee889fe4.mp4", "y": "v/e339a930d55d.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t02", "prompt": "A rose's petals shifting from white to a deep crimson as it blooms.", "ref": "v/593947eaa099.mp4", "x": "v/9bf1ca118783.mp4", "y": "v/56671509bb0a.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t03", "prompt": "A flower changes from purple to orange.", "ref": "v/4ea9f376bc25.mp4", "x": "v/310aec9a72f2.mp4", "y": "v/01f743c20f56.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t04", "prompt": "A mailbox with winter snow turning to spring bloom.", "ref": "v/985f2a095ee8.mp4", "x": "v/64c75d32fe61.mp4", "y": "v/581559e2d153.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t05", "prompt": "A lantern glowing brighter as the flame is turned up.", "ref": "v/c44acf25e346.mp4", "x": "v/134bb18fbdb1.mp4", "y": "v/1e2e6470ff1f.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t06", "prompt": "A sculpture transforming from ice to bronze.", "ref": "v/77cae07cb579.mp4", "x": "v/86eab5c34e7e.mp4", "y": "v/655c78f6d824.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t07", "prompt": "A bird's feathers shifting hues from grey to a brilliant blue.", "ref": "v/43f26e85df08.mp4", "x": "v/050c84e0164b.mp4", "y": "v/990d381df22f.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t08", "prompt": "A wall changes from yellow to grey.", "ref": "v/1788260df254.mp4", "x": "v/add93b041641.mp4", "y": "v/5ed835c719c2.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t09", "prompt": "A lamp changes from dim to bright.", "ref": "v/37a706762832.mp4", "x": "v/de1b320a88ea.mp4", "y": "v/2cd59ddbef12.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t10", "prompt": "A statue morphing from marble to gold.", "ref": "v/1dcd761e07cb.mp4", "x": "v/a92fdbc52933.mp4", "y": "v/96727fed0bb9.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t11", "prompt": "The sky changes from bright to dark.", "ref": "v/59ece8e3574f.mp4", "x": "v/c029855dbf55.mp4", "y": "v/e794dcb0b82e.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t12", "prompt": "An empty road in the desert changing from the clear, bright daylight to a starry night.", "ref": "v/f5ec01088475.mp4", "x": "v/29092e416788.mp4", "y": "v/59ba5c906158.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t13", "prompt": "A screen changes from dark to bright.", "ref": "v/9ec04350cc17.mp4", "x": "v/d684b600e612.mp4", "y": "v/5ee39ed89edd.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t14", "prompt": "A car changes from white to red.", "ref": "v/fdf057e485b6.mp4", "x": "v/fd0b4f859933.mp4", "y": "v/1894d9855162.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t15", "prompt": "A pair of shoes changes from red to yellow.", "ref": "v/68b43eaabe17.mp4", "x": "v/13e7eb04b39b.mp4", "y": "v/142c78068577.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t16", "prompt": "A butterfly's wings change from white to yellow.", "ref": "v/7a675fd11a32.mp4", "x": "v/bbb3cf00377c.mp4", "y": "v/505b4ed3d99e.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t17", "prompt": "The moon changes from yellow to silver.", "ref": "v/9e18c37ee1e2.mp4", "x": "v/b4a3926271f2.mp4", "y": "v/20b88e9e7bb8.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t18", "prompt": "A seashell changes from beige to pink.", "ref": "v/ee6f79ded9f2.mp4", "x": "v/e771ad783715.mp4", "y": "v/228a8a9e1df7.mp4", "w": 768, "h": 512, "g": "l"}];
-const BUILD = "59658aa0";
+const TRIALS = [{"id": "t01", "prompt": "A gemstone changes from dull to bright.", "ko": "보석이 탁한 상태에서 밝게 빛나는 상태로 바뀐다.", "pa": "dull", "pb": "bright", "ka": "탁한 상태", "kb": "밝게 빛나는 상태", "ref": "v/6f2c627bf322.mp4", "x": "v/9545ee889fe4.mp4", "y": "v/e339a930d55d.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t02", "prompt": "A rose's petals shifting from white to a deep crimson as it blooms.", "ko": "장미가 피어나면서 꽃잎이 흰색에서 짙은 진홍색으로 바뀐다.", "pa": "white", "pb": "a deep crimson", "ka": "흰색", "kb": "짙은 진홍색", "ref": "v/593947eaa099.mp4", "x": "v/9bf1ca118783.mp4", "y": "v/56671509bb0a.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t03", "prompt": "A flower changes from purple to orange.", "ko": "꽃이 보라색에서 주황색으로 바뀐다.", "pa": "purple", "pb": "orange", "ka": "보라색", "kb": "주황색", "ref": "v/4ea9f376bc25.mp4", "x": "v/310aec9a72f2.mp4", "y": "v/01f743c20f56.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t04", "prompt": "A mailbox with winter snow turning to spring bloom.", "ko": "우체통 주변이 겨울 눈 풍경에서 봄꽃이 핀 풍경으로 바뀐다.", "pa": "winter snow", "pb": "spring bloom", "ka": "겨울 눈 풍경", "kb": "봄꽃이 핀 풍경", "ref": "v/985f2a095ee8.mp4", "x": "v/64c75d32fe61.mp4", "y": "v/581559e2d153.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t05", "prompt": "A lantern glowing brighter as the flame is turned up.", "ko": "불꽃을 키우자 랜턴이 더 밝게 빛난다.", "pa": "", "pb": "glowing brighter", "ka": "", "kb": "더 밝게 빛난다", "ref": "v/c44acf25e346.mp4", "x": "v/134bb18fbdb1.mp4", "y": "v/1e2e6470ff1f.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t06", "prompt": "A sculpture transforming from ice to bronze.", "ko": "조각상이 얼음에서 청동으로 바뀐다.", "pa": "ice", "pb": "bronze", "ka": "얼음", "kb": "청동", "ref": "v/77cae07cb579.mp4", "x": "v/86eab5c34e7e.mp4", "y": "v/655c78f6d824.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t07", "prompt": "A bird's feathers shifting hues from grey to a brilliant blue.", "ko": "새의 깃털 색이 회색에서 선명한 파란색으로 바뀐다.", "pa": "grey", "pb": "a brilliant blue", "ka": "회색", "kb": "선명한 파란색", "ref": "v/43f26e85df08.mp4", "x": "v/050c84e0164b.mp4", "y": "v/990d381df22f.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t08", "prompt": "A wall changes from yellow to grey.", "ko": "벽이 노란색에서 회색으로 바뀐다.", "pa": "yellow", "pb": "grey", "ka": "노란색", "kb": "회색", "ref": "v/1788260df254.mp4", "x": "v/add93b041641.mp4", "y": "v/5ed835c719c2.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t09", "prompt": "A lamp changes from dim to bright.", "ko": "램프가 희미한 상태에서 밝은 상태로 바뀐다.", "pa": "dim", "pb": "bright", "ka": "희미한 상태", "kb": "밝은 상태", "ref": "v/37a706762832.mp4", "x": "v/de1b320a88ea.mp4", "y": "v/2cd59ddbef12.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t10", "prompt": "A statue morphing from marble to gold.", "ko": "석상이 대리석에서 금으로 바뀐다.", "pa": "marble", "pb": "gold", "ka": "대리석", "kb": "금", "ref": "v/1dcd761e07cb.mp4", "x": "v/a92fdbc52933.mp4", "y": "v/96727fed0bb9.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t11", "prompt": "The sky changes from bright to dark.", "ko": "하늘이 밝은 상태에서 어두운 상태로 바뀐다.", "pa": "bright", "pb": "dark", "ka": "밝은 상태", "kb": "어두운 상태", "ref": "v/59ece8e3574f.mp4", "x": "v/c029855dbf55.mp4", "y": "v/e794dcb0b82e.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t12", "prompt": "An empty road in the desert changing from the clear, bright daylight to a starry night.", "ko": "사막의 텅 빈 도로가 맑고 밝은 낮에서 별이 빛나는 밤으로 바뀐다.", "pa": "the clear, bright daylight", "pb": "a starry night", "ka": "맑고 밝은 낮", "kb": "별이 빛나는 밤", "ref": "v/f5ec01088475.mp4", "x": "v/29092e416788.mp4", "y": "v/59ba5c906158.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t13", "prompt": "A screen changes from dark to bright.", "ko": "화면이 어두운 상태에서 밝은 상태로 바뀐다.", "pa": "dark", "pb": "bright", "ka": "어두운 상태", "kb": "밝은 상태", "ref": "v/9ec04350cc17.mp4", "x": "v/d684b600e612.mp4", "y": "v/5ee39ed89edd.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t14", "prompt": "A car changes from white to red.", "ko": "자동차가 흰색에서 빨간색으로 바뀐다.", "pa": "white", "pb": "red", "ka": "흰색", "kb": "빨간색", "ref": "v/fdf057e485b6.mp4", "x": "v/fd0b4f859933.mp4", "y": "v/1894d9855162.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t15", "prompt": "A pair of shoes changes from red to yellow.", "ko": "신발 한 켤레가 빨간색에서 노란색으로 바뀐다.", "pa": "red", "pb": "yellow", "ka": "빨간색", "kb": "노란색", "ref": "v/68b43eaabe17.mp4", "x": "v/13e7eb04b39b.mp4", "y": "v/142c78068577.mp4", "w": 1280, "h": 704, "g": "w"}, {"id": "t16", "prompt": "A butterfly's wings change from white to yellow.", "ko": "나비의 날개가 흰색에서 노란색으로 바뀐다.", "pa": "white", "pb": "yellow", "ka": "흰색", "kb": "노란색", "ref": "v/7a675fd11a32.mp4", "x": "v/bbb3cf00377c.mp4", "y": "v/505b4ed3d99e.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t17", "prompt": "The moon changes from yellow to silver.", "ko": "달이 노란색에서 은색으로 바뀐다.", "pa": "yellow", "pb": "silver", "ka": "노란색", "kb": "은색", "ref": "v/9e18c37ee1e2.mp4", "x": "v/b4a3926271f2.mp4", "y": "v/20b88e9e7bb8.mp4", "w": 768, "h": 512, "g": "l"}, {"id": "t18", "prompt": "A seashell changes from beige to pink.", "ko": "조개껍데기가 베이지색에서 분홍색으로 바뀐다.", "pa": "beige", "pb": "pink", "ka": "베이지색", "kb": "분홍색", "ref": "v/ee6f79ded9f2.mp4", "x": "v/e771ad783715.mp4", "y": "v/228a8a9e1df7.mp4", "w": 768, "h": 512, "g": "l"}];
+const BUILD = "2861db3a";
 const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdMcqWIqEVaqchjsUfSSJXvQUxn0lbSmlUFCQGsGW8yeq1dLg/viewform";
 const FORM_ENTRY = "entry.1648280773";   // Google Form field id, used to pre-fill the code
 const DRAFT = false;
 const CODE_VER = 'US3';
 const REPEATS = 2;          // one Wan2.2 and one LTX-2.3 trial are shown again later with A and B swapped (consistency check)
 function checksum(s){ let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 1679616; return h.toString(36).padStart(4, '0'); }
+/* Answers are kept per position k of S.seq as {L: {q, t}, R: {q, t}} (what was on the left / right); x is on the left when xLeftAt(S, k). */
+function xLeftAt(S, k){ const q = S.seq[k]; return (S.sides[q.i] === 1) !== !!q.rep; }
+function ratingsXY(S, k){ const a = S.ans[k] || {}, L = a.L || {}, R = a.R || {}, xl = xLeftAt(S, k), X = xl ? L : R, Y = xl ? R : L; return {xq: X.q, xt: X.t, yq: Y.q, yt: Y.t}; }
 /* Code = US3 + nonce(4) + layout(1: d = desktop, m = phone)
    + per trial in TRIALS order: position of its first showing (base36) + side (1 = x on the left / tab A) + ratings xq xt yq yt (1-5, 0 = missing) + seconds (base36, 2 chars, max 1295)
    + per repeat: trial index (base36) + position (base36) + ratings xq xt yq yt + seconds (the repeat shows the opposite side)
@@ -221,11 +250,11 @@ function encodeCode(S){
   const pos = (i, rep) => S.seq.findIndex(q => q.i === i && !!q.rep === rep);
   const part = (r, ms) => `${r.xq || 0}${r.xt || 0}${r.yq || 0}${r.yt || 0}` + Math.min(1295, Math.max(0, Math.round((ms || 0) / 1000))).toString(36).padStart(2, '0');
   let body = '';
-  TRIALS.forEach((t, i) => { body += pos(i, false).toString(36) + String(S.sides[i]) + part(S.r[t.id] || {}, S.tms[t.id]); });
-  const reps = S.seq.filter(q => q.rep);
-  for (let k = 0; k < REPEATS; k++) {
-    const q = reps[k], t = q && TRIALS[q.i];
-    body += q ? q.i.toString(36) + pos(q.i, true).toString(36) + part(S.r2[t.id] || {}, S.tms2[t.id]) : 'zz000000';
+  TRIALS.forEach((t, i) => { const k = pos(i, false); body += k.toString(36) + String(S.sides[i]) + part(ratingsXY(S, k), S.tms[k]); });
+  const reps = []; S.seq.forEach((q, k) => { if (q.rep) reps.push(k); });
+  for (let j = 0; j < REPEATS; j++) {
+    const k = reps[j];
+    body += k === undefined ? 'zz000000' : S.seq[k].i.toString(36) + k.toString(36) + part(ratingsXY(S, k), S.tms[k]);
   }
   const s = CODE_VER + S.nonce + (S.layout === 'm' ? 'm' : 'd') + body;
   return s + checksum(s);
@@ -248,7 +277,7 @@ function makeSeq(rnd){
 }
 function newState(rnd, layout){
   return { ver: BUILD, n: TRIALS.length + REPEATS, nonce: Array.from({length: 4}, () => rnd(36).toString(36)).join(''), layout: layout === 'm' ? 'm' : 'd',
-           seq: makeSeq(rnd), sides: TRIALS.map(() => rnd(2)), idx: 0, r: {}, r2: {}, tms: {}, tms2: {}, cur: {L: {}, R: {}}, done: false };
+           seq: makeSeq(rnd), sides: TRIALS.map(() => rnd(2)), idx: 0, ans: [], tms: [], done: false };
 }
 </script>
 <script>
@@ -260,12 +289,12 @@ function newState(rnd, layout){
   const phone = window.matchMedia('(max-width: 760px)');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const store = {
-    get(){ try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); return s && s.ver === BUILD && s.n === N && Array.isArray(s.seq) ? s : null; } catch (e) { return null; } },
+    get(){ try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); return s && s.ver === BUILD && s.n === N && Array.isArray(s.seq) && Array.isArray(s.ans) ? s : null; } catch (e) { return null; } },
     set(s){ try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} },
     clear(){ try { localStorage.removeItem(KEY); } catch (e) {} }
   };
   let S = store.get();
-  let tStart = 0, vids = [], blocked = false;
+  let tStart = 0, vids = [], blocked = false, playing = true, scrubbing = false;
   const pool = new Map();
 
   document.querySelectorAll('.nTr').forEach(e => { e.textContent = N; });
@@ -278,6 +307,16 @@ function newState(rnd, layout){
   });
 
   function show(name){ ['intro', 'trial', 'done'].forEach(s => { $(s).hidden = s !== name; }); window.scrollTo(0, 0); }
+  /* sentence with the start (a) and target (b) phrases marked */
+  function hl(text, a, b){
+    const frag = document.createDocumentFragment(), marks = [];
+    if (a) { const p = text.indexOf(a); if (p >= 0) marks.push([p, p + a.length, 'sa']); }
+    if (b) { const p = text.indexOf(b, marks.length ? marks[0][1] : 0); if (p >= 0) marks.push([p, p + b.length, 'sb']); }
+    let i = 0;
+    for (const [s, e, cls] of marks) { frag.append(text.slice(i, s)); const m = document.createElement('mark'); m.className = cls; m.textContent = text.slice(s, e); frag.append(m); i = e; }
+    frag.append(text.slice(i));
+    return frag;
+  }
 
   function video(src){
     let v = pool.get(src);
@@ -292,9 +331,9 @@ function newState(rnd, layout){
   }
   /* Phones (iOS in particular) load a video only after play() is called from a tap; start it detached, pause it until it is shown. */
   function warm(v){ const p = v.play(); if (p && p.then) p.then(() => { if (!v.isConnected) v.pause(); }).catch(() => {}); }
-  function trialSrcs(k){ const q = S.seq[k], t = q && TRIALS[q.i]; return t ? [t.ref, t.x, t.y] : []; }
+  function trialSrcs(k){ const q = S && S.seq[k], t = q && TRIALS[q.i]; return t ? [t.ref, t.x, t.y] : []; }
   function prune(){
-    const keep = new Set([...trialSrcs(S.idx), ...trialSrcs(S.idx + 1)]);
+    const keep = new Set([...trialSrcs(S.idx - 1), ...trialSrcs(S.idx), ...trialSrcs(S.idx + 1)]);
     for (const [src, v] of pool) if (!keep.has(src)) { v.removeAttribute('src'); v.load(); pool.delete(src); }
   }
   function ready(v){
@@ -309,88 +348,108 @@ function newState(rnd, layout){
   function cover(){ return Object.assign(document.createElement('div'), {className: 'wait', textContent: 'Loading · 불러오는 중'}); }
   function uncover(v){ const w = v.parentElement && v.parentElement.querySelector('.wait'); if (w) w.remove(); }
   function covered(v){ return !!(v.parentElement && v.parentElement.querySelector('.wait')); }
-  async function switchTo(side){                   // phone tabs; called from a tap
-    setTab(side);
-    const v = side === 'R' ? vids[2] : vids[1];
-    if (v && covered(v)) {
-      const p = v.play(); if (p && p.catch) p.catch(() => {});
-      await ready(v);
-      if ($('vids').dataset.show !== side || !vids.includes(v)) return;
-      uncover(v);
-    }
-    playAll();
-  }
-  function playAll(){
-    vids.forEach(v => { try { v.pause(); v.currentTime = 0; } catch (e) {} });
+  function cur(){ return S.ans[S.idx] || (S.ans[S.idx] = {L: {}, R: {}}); }
+
+  /* ---- synced playback: the reference is the clock; every time bar moves all three videos ---- */
+  function dur(){ const d = vids[0] && vids[0].duration; return isFinite(d) && d > 0 ? d : 5.04; }
+  function seekAll(t){ vids.forEach(v => { try { v.currentTime = t; } catch (e) {} }); }
+  function pauseAll(){ vids.forEach(v => { try { v.pause(); } catch (e) {} }); }
+  function playActive(){
     const ps = active().map(v => { try { return v.play(); } catch (e) { return Promise.reject(e); } });
     Promise.all(ps.map(p => (p && p.then) ? p.then(() => true, err => !(err && err.name === 'NotAllowedError')) : true))
-      .then(oks => { blocked = oks.includes(false); update(); });
+      .then(oks => { if (oks.includes(false)) { blocked = true; playing = false; pauseAll(); } else blocked = false; paintCtl(); update(); });
   }
-  function kick(){ playAll(); trialSrcs(S.idx + 1).map(video).forEach(warm); }   // call from inside a tap or click
+  function restart(){ pauseAll(); seekAll(0); if (playing) playActive(); }
+  function setPlaying(on){
+    playing = on;
+    const r = vids[0];
+    if (on && r) { seekAll(r.ended || r.currentTime >= dur() - 0.05 ? 0 : r.currentTime); playActive(); }
+    else pauseAll();
+    paintCtl(); update();
+  }
+  function paintCtl(){ document.querySelectorAll('.ctl .pp').forEach(b => { b.textContent = playing ? '❚❚' : '▶'; b.setAttribute('aria-label', playing ? 'Pause · 일시정지' : 'Play · 재생'); }); }
+  function tick(){
+    requestAnimationFrame(tick);
+    if (!vids.length || $('trial').hidden) return;
+    const ref = vids[0], t = ref.currentTime || 0, d = dur(), label = `${t.toFixed(1)} / ${d.toFixed(1)} s`;
+    document.querySelectorAll('.ctl').forEach(c => {
+      const s = c.querySelector('.seek'), m = c.querySelector('.tm');
+      if (s.max !== String(d)) s.max = String(d);
+      if (!scrubbing) s.value = String(t);
+      if (m.textContent !== label) m.textContent = label;
+    });
+    if (playing && !scrubbing) for (const v of active()) if (v !== ref && !v.paused && Math.abs(v.currentTime - t) > 0.12) { try { v.currentTime = t; } catch (e) {} }
+  }
+  requestAnimationFrame(tick);
+  function kick(){ playActive(); trialSrcs(S.idx + 1).map(video).forEach(warm); }   // call from inside a tap or click
   function setTab(side){
     $('vids').dataset.show = side;
     $('tabL').setAttribute('aria-selected', String(side === 'L'));
     $('tabR').setAttribute('aria-selected', String(side === 'R'));
   }
+  async function switchTo(side){                   // phone tabs; called from a tap
+    setTab(side);
+    const v = side === 'R' ? vids[2] : vids[1];
+    if (!v) return;
+    if (covered(v)) {
+      const p = v.play(); if (p && p.catch) p.catch(() => {});
+      await ready(v);
+      if ($('vids').dataset.show !== side || !vids.includes(v)) return;
+      uncover(v);
+    }
+    pauseAll(); seekAll(vids[0].currentTime); if (playing) playActive();
+  }
 
   async function showTrial(){
-    const q = S.seq[S.idx], ti = q.i, t = TRIALS[ti], xLeft = (S.sides[ti] === 1) !== !!q.rep, myS = S, myIdx = S.idx;
+    const q = S.seq[S.idx], ti = q.i, t = TRIALS[ti], xLeft = xLeftAt(S, S.idx), myS = S, myIdx = S.idx;
     $('count').textContent = `${S.idx + 1} / ${N}`;
     $('barFill').style.width = `${(S.idx / N) * 100}%`;
-    $('promptTxt').textContent = t.prompt;
+    $('promptTxt').replaceChildren(hl(t.prompt, t.pa, t.pb));
+    $('promptKo').replaceChildren(hl(t.ko || '', t.ka, t.kb));
     const ar = `${t.w} / ${t.h}`;
     const ref = video(t.ref), L = video(xLeft ? t.x : t.y), R = video(xLeft ? t.y : t.x);
     [ref, L, R].forEach(v => { v.onended = null; v.ontimeupdate = null; v.loop = false; });
     [['slotRef', ref], ['slotL', L], ['slotR', R]].forEach(([s, v]) => { const el = $(s); el.style.setProperty('--ar', ar); el.replaceChildren(v, cover()); });
-    document.querySelectorAll('.scale input').forEach(inp => {
-      const side = inp.name.split('-')[1], q = inp.name.split('-')[2];
-      inp.checked = String(S.cur[side][q] || '') === inp.value;
-    });
+    const c = cur();
+    document.querySelectorAll('.scale input').forEach(inp => { const [, side, qq] = inp.name.split('-'); inp.checked = String(c[side][qq] || '') === inp.value; });
     setTab('L');
-    vids = [ref, L, R]; blocked = false;
+    vids = [ref, L, R]; blocked = false; playing = true; scrubbing = false;
     tStart = Date.now();
     show('trial');
-    update();
+    paintCtl(); update();
     trialSrcs(S.idx + 1).forEach(video);
     prune();
     const act = active();
     await Promise.all(act.map(ready));                                   // on a phone the hidden B side loads when its tab is opened
-    if (S !== myS || S.idx !== myIdx || $('trial').hidden) return;     // moved on or reset while loading
+    if (S !== myS || S.idx !== myIdx || $('trial').hidden) return;      // moved on or reset while loading
     act.forEach(uncover);
-    ref.onended = () => { playAll(); };
-    ref.ontimeupdate = () => { for (const v of [L, R]) if (!v.paused && Math.abs(v.currentTime - ref.currentTime) > 0.2) { try { v.currentTime = ref.currentTime; } catch (e) {} } };
-    playAll();
+    ref.onended = () => { if (playing && !scrubbing) restart(); };
+    restart();
   }
 
-  function sideDone(s){ const c = S.cur[s]; return !!(c.q && c.t); }
+  function sideDone(s){ const c = cur()[s]; return !!(c.q && c.t); }
   function update(){
-    if (!S || !S.cur || $('trial').hidden) return;
+    if (!S || S.done || $('trial').hidden) return;
     const l = sideDone('L'), r = sideDone('R');
     $('tickL').textContent = l ? '✓' : ''; $('tickR').textContent = r ? '✓' : '';
     $('nextBtn').disabled = !(l && r);
-    $('replayBtn').classList.toggle('primary', blocked);
-    $('hint').textContent = blocked ? 'If the videos do not play, tap Replay · 영상이 재생되지 않으면 다시 재생을 눌러 주세요'
+    $('backBtn').disabled = S.idx === 0;
+    $('hint').textContent = blocked ? 'If the videos do not play, tap ▶ under a video · 영상이 재생되지 않으면 영상 아래 ▶ 버튼을 눌러 주세요'
       : (l && r) ? '' : (!l && !r) ? 'Rate A and B on both questions · A와 B 모두 두 질문에 답해 주세요'
       : !l ? 'Video A still needs ratings · A 영상 평가가 남았습니다' : 'Video B still needs ratings · B 영상 평가가 남았습니다';
   }
-  function addTime(){ if (S && !S.done && tStart && !$('trial').hidden) { const q = S.seq[S.idx], t = TRIALS[q.i], bag = q.rep ? S.tms2 : S.tms; bag[t.id] = (bag[t.id] || 0) + (Date.now() - tStart); tStart = Date.now(); store.set(S); } }
+  function addTime(){ if (S && !S.done && tStart && !$('trial').hidden) { S.tms[S.idx] = (S.tms[S.idx] || 0) + (Date.now() - tStart); tStart = Date.now(); store.set(S); } }
 
-  function next(){
-    if ($('nextBtn').disabled) return;
-    addTime();
-    const q = S.seq[S.idx], ti = q.i, t = TRIALS[ti], xLeft = (S.sides[ti] === 1) !== !!q.rep, c = S.cur;
-    const X = xLeft ? c.L : c.R, Y = xLeft ? c.R : c.L;
-    (q.rep ? S.r2 : S.r)[t.id] = { xq: +X.q, xt: +X.t, yq: +Y.q, yt: +Y.t };
-    S.idx += 1; S.cur = {L: {}, R: {}};
-    vids.forEach(v => { try { v.pause(); } catch (e) {} });
-    tStart = 0;
+  function go(delta){
+    addTime(); pauseAll(); tStart = 0;
+    S.idx += delta;
     if (S.idx >= N) { S.done = true; store.set(S); showDone(); return; }
     store.set(S);
     showTrial(); kick();
   }
 
   function showDone(){
-    pool.forEach(v => { v.removeAttribute('src'); v.load(); }); pool.clear();
+    pool.forEach(v => { v.removeAttribute('src'); v.load(); }); pool.clear(); vids = [];
     $('codeBox').textContent = encodeCode(S);
     if (FORM_URL) {
       $('formLink').href = FORM_ENTRY ? `${FORM_URL}?usp=pp_url&${FORM_ENTRY}=${encodeURIComponent($('codeBox').textContent)}` : FORM_URL;
@@ -405,16 +464,29 @@ function newState(rnd, layout){
     show('intro');
   }
 
-  document.addEventListener('change', e => {
-    const inp = e.target;
-    if (!inp.matches || !inp.matches('.scale input') || !S) return;
-    const [, side, q] = inp.name.split('-');
-    S.cur[side][q] = +inp.value; store.set(S); update();
+  document.addEventListener('input', e => {
+    const s = e.target;
+    if (!s.classList || !s.classList.contains('seek') || !vids.length) return;
+    scrubbing = true; pauseAll(); seekAll(+s.value);
+    document.querySelectorAll('.ctl .seek').forEach(o => { if (o !== s) o.value = s.value; });
   });
+  const endScrub = () => { if (!scrubbing) return; scrubbing = false; if (playing) playActive(); };
+  document.addEventListener('change', e => {
+    const el = e.target;
+    if (el.classList && el.classList.contains('seek')) { endScrub(); return; }
+    if (!el.matches || !el.matches('.scale input') || !S) return;
+    const [, side, q] = el.name.split('-');
+    cur()[side][q] = +el.value; store.set(S); update();
+  });
+  document.addEventListener('pointerup', endScrub);
+  document.addEventListener('touchend', endScrub);
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.ctl .pp') && vids.length) setPlaying(!playing); });
   $('startBtn').addEventListener('click', () => {
     if (!S) { S = newState(rnd, phone.matches ? 'm' : 'd'); store.set(S); }
     showTrial(); kick();
   });
+  $('nextBtn').addEventListener('click', () => { if (!$('nextBtn').disabled) go(1); });
+  $('backBtn').addEventListener('click', () => { if (S && S.idx > 0) go(-1); });
   $('tabL').addEventListener('click', () => { switchTo('L'); });
   $('tabR').addEventListener('click', () => { switchTo('R'); });
   $('goB').addEventListener('click', () => {
@@ -423,13 +495,11 @@ function newState(rnd, layout){
   });
   const onLayout = () => {                         // rotation across the phone breakpoint
     if ($('trial').hidden || !vids.length) return;
-    const act = active(), cur = vids;
+    const act = active(), mine = vids;
     act.forEach(v => { const p = v.play(); if (p && p.catch) p.catch(() => {}); });
-    Promise.all(act.map(ready)).then(() => { if (vids === cur) { act.forEach(uncover); playAll(); } });
+    Promise.all(act.map(ready)).then(() => { if (vids !== mine) return; act.forEach(uncover); pauseAll(); seekAll(vids[0].currentTime); if (playing) playActive(); });
   };
   if (phone.addEventListener) phone.addEventListener('change', onLayout); else if (phone.addListener) phone.addListener(onLayout);
-  $('replayBtn').addEventListener('click', () => { if ($('slotRef').querySelector('video')) playAll(); });
-  $('nextBtn').addEventListener('click', next);
   $('copyBtn').addEventListener('click', () => {
     const code = $('codeBox').textContent;
     const selectIt = () => { const r = document.createRange(); r.selectNodeContents($('codeBox')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
@@ -441,11 +511,11 @@ function newState(rnd, layout){
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') addTime(); else if (tStart) tStart = Date.now(); });
   if (DRAFT) {
     $('draftNote').hidden = false;
-    $('resetBtn').addEventListener('click', () => { store.clear(); S = null; vids.forEach(v => { try { v.pause(); } catch (e) {} }); showIntro(); });
+    $('resetBtn').addEventListener('click', () => { store.clear(); S = null; pauseAll(); vids = []; showIntro(); });
   }
   function hashReset(){                            // testers: open the link with #reset to start over
     if (location.hash !== '#reset') return false;
-    store.clear(); S = null; vids.forEach(v => { try { v.pause(); } catch (e) {} });
+    store.clear(); S = null; pauseAll(); vids = [];
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
     showIntro(); return true;
   }
