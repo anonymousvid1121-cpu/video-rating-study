@@ -13,22 +13,23 @@
 <style>
 /* Layout: an evaluation bench. Sentence strip on top (English | Korean, start and target states highlighted), then one row of three
    videos (reference | A | B), each with a shared time bar; A and B carry their own two rating rails. One interface language at a time (Korean by default).
-   Phone (<=760px): the reference stays on top and A / B are shown one at a time under tabs; the Back / Next bar sticks to the bottom. */
+   Phone (<=760px): the reference stays on top and A / B are shown one at a time under tabs; the Back / Next bar sticks to the bottom.
+   Start first opens the examples page (reference | example video | caption per row, rows play while on screen; the user kept 2 good examples, no bad ones). */
 :root{
   --bg:#eef0ee; --surface:#ffffff; --ink:#1a1d1b; --mute:#5c625e; --line:#d5d9d5;
   --accent:#2c56c9; --accent-ink:#ffffff; --accent-soft:#dfe7fb; --warn:#a8481f; --stage:#0b0c0c;
-  --sa:#fbe0bd; --sb:#cfe3ff;
+  --sa:#fbe0bd; --sb:#cfe3ff; --good:#1d6b34; --good-soft:#dcefe2; --bad:#a3271d; --bad-soft:#f7dedb;
   --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#141615; --surface:#1d201e; --ink:#e7e9e7; --mute:#9aa19c; --line:#323734;
   --accent:#86a6ff; --accent-ink:#0c1328; --accent-soft:#25304d; --warn:#f09468; --stage:#000000;
-  --sa:#5a3c16; --sb:#1d3a5f; color-scheme:dark}}
+  --sa:#5a3c16; --sb:#1d3a5f; --good:#86d99f; --good-soft:#1b3324; --bad:#ff9d90; --bad-soft:#41201c; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#141615; --surface:#1d201e; --ink:#e7e9e7; --mute:#9aa19c; --line:#323734;
   --accent:#86a6ff; --accent-ink:#0c1328; --accent-soft:#25304d; --warn:#f09468; --stage:#000000;
-  --sa:#5a3c16; --sb:#1d3a5f; color-scheme:dark}
+  --sa:#5a3c16; --sb:#1d3a5f; --good:#86d99f; --good-soft:#1b3324; --bad:#ff9d90; --bad-soft:#41201c; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 0}
@@ -50,6 +51,10 @@ p{margin:0}
 .qcard h3,.raffle h3{margin:0 0 4px;font-size:16px;font-weight:600}
 .raffle{background:var(--accent-soft);border-color:var(--accent-soft)}
 .raffle-note{background:var(--accent-soft);border-radius:8px;padding:10px 12px}
+.must{font-weight:600;font-size:16px}
+.contact{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px}
+.contact label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
+.contact input{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;min-width:0}
 .qcard .q{margin-bottom:10px}
 .legend{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:14px}
 .legend b{font-family:var(--mono);font-weight:500;display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;background:var(--accent-soft)}
@@ -57,7 +62,7 @@ p{margin:0}
 .btn{display:inline-block;text-decoration:none;font:inherit;font-weight:600;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px 18px;cursor:pointer;touch-action:manipulation}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
-.btn:focus-visible,.lang button:focus-visible,.tabs button:focus-visible,.ctl button:focus-visible,.ctl input:focus-visible,.scale input:focus-visible+label,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn:focus-visible,.contact input:focus-visible,.lang button:focus-visible,.tabs button:focus-visible,.ctl button:focus-visible,.ctl input:focus-visible,.scale input:focus-visible+label,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .small{font-size:13px}
 .mobile-only{display:none}
@@ -108,6 +113,22 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
 .foot{position:sticky;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--line);
   padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
 .hint{color:var(--mute);font-size:13px;min-height:1.2em}
+/* examples (after Start, before the first trial): reference | example video | caption, the same video size as a trial */
+.caution{background:var(--surface);border:1px solid var(--warn);border-left-width:5px;border-radius:10px;padding:12px 16px;display:grid;gap:4px;max-width:96ch}
+.caution b{color:var(--warn)}
+.exgroup{display:grid;gap:12px}
+.exhead{display:flex;align-items:center;gap:10px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:14px;border-radius:999px;padding:3px 12px;justify-self:start}
+.badge.good{background:var(--good-soft);color:var(--good)}
+.badge.bad{background:var(--bad-soft);color:var(--bad)}
+.exgroup>.exhead .badge{font-size:17px;padding:4px 14px}
+.exrow{display:grid;gap:10px}
+.exrow .ptxt p{font-size:17px}
+.exrow .vlab b{font-size:16px}
+.exvids{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.excap{display:grid;gap:8px;align-content:start;font-size:15px;padding-top:4px}
+.excap .arrow{font-weight:600}
+.exnav{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center}
 /* done */
 .code{font-family:var(--mono);font-size:15px;line-height:1.6;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;user-select:all;-webkit-user-select:all}
 @media (max-width:900px){
@@ -121,6 +142,9 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
   .panel{padding:12px 14px}
   .ptxt p{font-size:17px}
   .vids{grid-template-columns:1fr;gap:12px}
+  .exvids{grid-template-columns:1fr;gap:12px}
+  .excap{order:-1;padding-top:0}
+  .exrow .ptxt p{font-size:16px}
   .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .vids[data-show="L"] .side[data-side="R"],.vids[data-show="R"] .side[data-side="L"]{display:none}
   .side .vlab{display:none}
@@ -147,6 +171,7 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
       <div class="lede">
         <p class="first"><span class="l-ko">변화가 없는 기준 영상(Reference)에, 변화를 일으키는 두 가지 방법 A와 B를 적용했습니다.</span><span class="l-en">Two methods, A and B, were applied to a reference video that shows no change, each trying to create the change described in a sentence.</span></p>
         <p><span class="l-ko">총 <span class="nTr">20</span>개 문항마다 변화를 설명하는 문장, 기준 영상, 그리고 A와 B 영상이 나옵니다. 아래 두 질문에 대해 A와 B를 각각 따로 평가해 주세요. 정답은 없습니다.</span><span class="l-en">Each of the <span class="nTr">20</span> trials shows the sentence, the reference video, and videos A and B. Rate A and B separately on the two questions below. There are no right or wrong answers.</span></p>
+        <p id="exIntro"><span class="l-ko">시작하기를 누르면 먼저 <span class="exCountKo"></span>를 보여 드립니다.</span><span class="l-en">After you press Start, you first see <span class="exCountEn"></span>.</span></p>
         <p><span class="l-ko">약 5분이 걸리며, 이전 버튼으로 앞 문항으로 돌아갈 수 있습니다. 영상에는 소리가 없고 반복 재생되며, 어느 영상이든 아래 시간 막대를 움직이면 세 영상이 함께 움직입니다.</span><span class="l-en">The study takes about 5 minutes, and you can return to the previous trial with the Back button. The videos have no sound and play on a loop. Moving the time bar under any video moves all three videos together.</span></p>
         <p><span class="l-ko">큰 화면의 컴퓨터를 권장하지만 휴대폰으로도 참여할 수 있습니다. 참여해 주셔서 감사합니다.</span><span class="l-en">A computer with a large browser window works best, but a phone also works. Thank you for taking part.</span></p>
         <p class="mobile-only"><span class="l-ko">휴대폰에서는 영상 용량이 약 200MB이므로 와이파이에 연결해 주시고, 휴대폰을 세로로 들어 주세요. A와 B 영상은 A/B 탭으로 번갈아 볼 수 있습니다.</span><span class="l-en">On a phone, please use Wi-Fi because the videos total about 200 MB, and hold the phone upright. Switch between videos A and B with the A and B tabs.</span></p>
@@ -154,7 +179,13 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
     </div>
     <div class="panel raffle stack">
       <h3><span class="l-ko">커피 추첨</span><span class="l-en">Coffee draw</span></h3>
-      <p><span class="l-ko">설문을 마치면 마지막에 구글 폼으로 응답을 제출합니다. 참여하신 분 중 10분을 추첨해 메가커피 아메리카노를 드립니다. 추첨에 참여하시려면 그 구글 폼에 성함과 전화번호를 남겨 주세요.</span><span class="l-en">When you finish, you submit your answers with a short Google Form. We will draw 10 participants at random to receive a Mega Coffee Americano. To join the draw, enter your name and phone number in that form.</span></p>
+      <p class="must"><span class="l-ko">❗️설문을 마치면 마지막에 구글 폼으로 응답을 제출합니다❗️</span><span class="l-en">❗️When you finish, you submit your answers with a Google Form❗️</span></p>
+      <p><span class="l-ko">참여하신 분 중 10분을 추첨해 메가커피 아메리카노를 드립니다. 추첨에 참여하시려면 아래에 성함과 전화번호를 적어 주세요. 마지막 구글 폼에 자동으로 채워집니다.</span><span class="l-en">We will draw 10 participants at random to receive a Mega Coffee Americano. To join the draw, enter your name and phone number below. They are filled into the Google Form at the end.</span></p>
+      <div class="contact">
+        <label><span><span class="l-ko">성함</span><span class="l-en">Name</span></span><input type="text" id="cName" autocomplete="name" maxlength="40"></label>
+        <label><span><span class="l-ko">전화번호</span><span class="l-en">Phone number</span></span><input type="tel" id="cPhone" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="010-0000-0000"></label>
+      </div>
+      <p class="small muted"><span class="l-ko">입력은 선택입니다. 입력하신 정보는 이 브라우저 탭에만 잠시 남아 있다가 마지막 폼을 제출할 때 전달되며, 커피 추첨 연락에만 사용합니다.</span><span class="l-en">This is optional. The details stay only in this browser tab until you submit the form at the end, and are used only to contact the draw winners.</span></p>
     </div>
     <div class="qcards">
       <div class="panel qcard">
@@ -171,6 +202,23 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
     <div class="row">
       <button type="button" class="btn primary" id="startBtn">시작하기</button>
       <span class="small muted"><span class="l-ko">평가 응답은 연구 목적으로만 사용되며, 성함과 전화번호 입력은 선택입니다.</span><span class="l-en">Your ratings are used only for research. Your name and phone number are optional.</span></span>
+    </div>
+  </section>
+
+  <section id="examples" class="stack" hidden>
+    <div class="panel stack">
+      <h2><span class="l-ko">평가 예시</span><span class="l-en">Examples</span></h2>
+      <p><span class="l-ko">문항을 시작하기 전에 <span class="exCountKo"></span>를 봐 주세요. 예시에서는 기준 영상 옆에 영상이 하나만 나오지만, 실제 문항에서는 A와 B 두 영상을 각각 평가합니다.</span><span class="l-en">Before the trials, please look at <span class="exCountEn"></span>. Each example shows one video next to the reference. In the trials you rate two videos, A and B, separately.</span></p>
+    </div>
+    <div class="caution">
+      <p><b><span class="l-ko">주의</span><span class="l-en">Note</span></b></p>
+      <p><span class="l-ko">이 연구는 영상 편집(editing)이 아니라 영상 생성(generation) 연구입니다. 기준 영상과 A, B는 같은 문장과 같은 seed(생성 시작점)로 만들어서 비슷해 보일 뿐, 기준 영상을 고친 결과가 아닙니다. 그래서 기준 영상과 달라 보인다는 이유만으로 퀄리티가 낮은 것은 아닙니다. 퀄리티는 영상 자체에 이상한 artifact가 있는지로 평가해 주세요.</span><span class="l-en">This study is about video generation, not video editing. The reference and videos A and B look alike only because they were generated from the same sentence and the same seed (starting point). They are not edits of the reference. So a video is not lower in quality just because it looks different from the reference. Judge quality by whether the video itself shows strange artifacts.</span></p>
+    </div>
+    <div class="exgroup" id="exGood"><div class="exhead"><span class="badge good">✓ <span class="l-ko">좋은 예시</span><span class="l-en">Good examples</span></span></div></div>
+    <div class="exgroup" id="exBad"><div class="exhead"><span class="badge bad">✗ <span class="l-ko">나쁜 예시</span><span class="l-en">Bad examples</span></span></div></div>
+    <div class="exnav">
+      <button type="button" class="btn" id="exBack"><span class="l-ko">← 처음으로</span><span class="l-en">← Back to the start</span></button>
+      <button type="button" class="btn primary" id="exGo"><span class="l-ko">평가 시작하기 →</span><span class="l-en">Start the trials →</span></button>
     </div>
   </section>
 
@@ -226,7 +274,7 @@ fieldset.rate legend{padding:0 4px;font-weight:600;font-size:14px}
     <div class="panel stack">
       <h2><span class="l-ko">모두 끝났습니다. 감사합니다!</span><span class="l-en">All done. Thank you!</span></h2>
       <p><span class="l-ko">제출 폼을 열고 제출 버튼을 눌러 주세요. 폼을 열면 응답 코드가 자동으로 입력되어 있습니다. 칸이 비어 있으면 아래 코드를 복사해 붙여넣어 주세요. 폼을 제출해야 응답이 전달됩니다.</span><span class="l-en">Open the submission form and press Submit. The form opens with your response code already filled in. If the field is empty, copy the code below and paste it. Your answers reach us only when you submit the form.</span></p>
-      <p class="raffle-note"><span class="l-ko">커피 추첨에 참여하시려면 폼에 성함과 전화번호를 입력한 뒤 제출해 주세요.</span><span class="l-en">To join the coffee draw, enter your name and phone number in the form before you submit.</span></p>
+      <p class="raffle-note"><span id="raffleManual"><span class="l-ko">커피 추첨에 참여하시려면 폼에 성함과 전화번호를 입력한 뒤 제출해 주세요.</span><span class="l-en">To join the coffee draw, enter your name and phone number in the form before you submit.</span></span><span id="raffleAuto" hidden><span class="l-ko">처음에 입력하신 성함과 전화번호가 폼에 자동으로 채워집니다. 확인한 뒤 제출해 주세요.</span><span class="l-en">The name and phone number you entered at the start are already filled into the form. Check them and submit.</span></span></p>
       <p id="formRow"><a class="btn primary" id="formLink" href="#" target="_blank" rel="noopener"><span class="l-ko">제출 폼 열기</span><span class="l-en">Open the submission form</span></a></p>
       <div class="code" id="codeBox"></div>
       <div class="row">
@@ -244,6 +292,8 @@ const TRIALS = [{"id": "t01", "prompt": "A lantern glowing brighter as the flame
 const BUILD = "945c7a99";
 const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdMcqWIqEVaqchjsUfSSJXvQUxn0lbSmlUFCQGsGW8yeq1dLg/viewform";
 const FORM_ENTRY = "entry.1648280773";   // Google Form field id, used to pre-fill the code
+const FORM_CONTACT = "entry.2075668069";   // Google Form field for the optional "name, phone" (coffee draw), pre-filled when given on the first page
+const EXAMPLES = [{"slot": "good1", "kind": "good", "n": 1, "prompt": "A bridge transforming from steel to illuminated neon.", "ko": "다리가 강철에서 빛나는 네온으로 바뀐다.", "pa": "steel", "pb": "illuminated neon", "ka": "강철", "kb": "빛나는 네온", "ref": "v/a45f09c1a77a.mp4", "ex": "v/8ab3aa9713d6.mp4", "w": 1280, "h": 704, "cap": ["장면이 기준 영상과 비슷하게 유지되면서 문장의 변화가 자연스럽게 일어납니다. 이상한 artifact도 없습니다.", "The scene stays close to the reference while the described change happens naturally. There are no strange artifacts."], "hint": ["변화의 자연스러움은 높은 점수, 영상 퀄리티는 기준 영상과 비슷하면 3점입니다.", "High transition naturalness. Video quality is 3 when it matches the reference."]}, {"slot": "good2", "kind": "good", "n": 2, "prompt": "A car changes from golden to white.", "ko": "자동차가 금색에서 흰색으로 바뀐다.", "pa": "golden", "pb": "white", "ka": "금색", "kb": "흰색", "ref": "v/702364ca08b9.mp4", "ex": "v/acf54ca7386c.mp4", "w": 768, "h": 512, "cap": ["장면은 기준 영상과 꽤 다르지만, 문장의 변화가 자연스럽게 일어나고 이상한 artifact도 없습니다.", "The scene looks quite different from the reference, but the described change happens naturally and there are no strange artifacts."], "hint": ["변화의 자연스러움은 높은 점수입니다. 기준 영상과 다르다는 이유만으로 영상 퀄리티를 낮추지 마세요.", "High transition naturalness. Do not lower the video quality just because the video differs from the reference."]}];   // good / bad example videos shown once after Start (build_study.py from examples.json); they carry no ratings
 const DRAFT = false;
 const CODE_VER = 'US3';
 const REPEATS = 1;   // trials shown a second time later with A and B swapped (consistency check)
@@ -327,14 +377,14 @@ function newState(rnd, layout){
     }
   });
 
-  function show(name){ ['intro', 'trial', 'done'].forEach(s => { $(s).hidden = s !== name; }); window.scrollTo(0, 0); }
+  function show(name){ ['intro', 'examples', 'trial', 'done'].forEach(s => { $(s).hidden = s !== name; }); window.scrollTo(0, 0); }
   function paintStart(){ const resume = S && !S.done && S.idx > 0; $('startBtn').textContent = resume ? T('cont', S.idx + 1, N) : T('start'); }
   function setLang(l){
     LANG = l === 'en' ? 'en' : 'ko';
     $('app').dataset.lang = LANG; document.documentElement.lang = LANG;
     $('langKo').setAttribute('aria-pressed', String(LANG === 'ko')); $('langEn').setAttribute('aria-pressed', String(LANG === 'en'));
     try { localStorage.setItem(LANG_KEY, LANG); } catch (e) {}
-    paintStart(); paintCtl(); update();
+    paintStart(); paintCtl(); paintExCtl(); update();
     document.querySelectorAll('.stage .wait').forEach(w => { w.textContent = T('loading'); });
     document.querySelectorAll('.ctl .seek').forEach(s => s.setAttribute('aria-label', T('time')));
     $('copyMsg').textContent = '';
@@ -399,12 +449,13 @@ function newState(rnd, layout){
     else pauseAll();
     paintCtl(); update();
   }
-  function paintCtl(){ document.querySelectorAll('.ctl .pp').forEach(b => { b.textContent = playing ? '❚❚' : '▶'; b.setAttribute('aria-label', playing ? T('pause') : T('play')); }); }
+  function paintCtl(){ document.querySelectorAll('#trial .ctl .pp').forEach(b => { b.textContent = playing ? '❚❚' : '▶'; b.setAttribute('aria-label', playing ? T('pause') : T('play')); }); }
   function tick(){
     requestAnimationFrame(tick);
+    if (!$('examples').hidden) { exTick(); return; }
     if (!vids.length || $('trial').hidden) return;
     const ref = vids[0], t = ref.currentTime || 0, d = dur(), label = `${t.toFixed(1)} / ${d.toFixed(1)} s`;
-    document.querySelectorAll('.ctl').forEach(c => {
+    document.querySelectorAll('#trial .ctl').forEach(c => {
       const s = c.querySelector('.seek'), m = c.querySelector('.tm');
       if (s.max !== String(d)) s.max = String(d);
       if (!scrubbing) s.value = String(t);
@@ -431,6 +482,91 @@ function newState(rnd, layout){
     }
     pauseAll(); seekAll(vids[0].currentTime); if (playing) playActive();
   }
+
+  /* ---- examples: each row plays its reference + example video in a loop while the row is on screen; the reference is the clock ---- */
+  const exRows = [];
+  let exObs = null;
+  const CTL_HTML = '<div class="ctl"><button type="button" class="pp">❚❚</button><input type="range" class="seek" min="0" max="5.04" step="0.01" value="0"><span class="tm">0.0 / 5.0 s</span></div>';
+  function txt(cls, s){ const e = document.createElement('span'); e.className = cls; e.textContent = s; return e; }
+  function exInit(){
+    $('exIntro').hidden = !EXAMPLES.length;
+    const nG = EXAMPLES.filter(e => e.kind === 'good').length, nB = EXAMPLES.length - nG, W = ['', 'one', 'two', 'three', 'four'];
+    const ko = [nG ? `좋은 예시 ${nG}개` : '', nB ? `나쁜 예시 ${nB}개` : ''].filter(Boolean).join('와 ');     // the sentence goes on with "를"
+    const en = [nG ? `${W[nG] || nG} good example${nG > 1 ? 's' : ''}` : '', nB ? `${W[nB] || nB} bad example${nB > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ');
+    document.querySelectorAll('.exCountKo').forEach(e => { e.textContent = ko; });
+    document.querySelectorAll('.exCountEn').forEach(e => { e.textContent = en; });
+    EXAMPLES.forEach(e => {
+      const art = document.createElement('article'), good = e.kind === 'good';
+      art.className = 'panel exrow';
+      art.innerHTML = `<span class="badge ${good ? 'good' : 'bad'}">${good ? '✓' : '✗'} <span class="l-ko">${good ? '좋은 예' : '나쁜 예'} ${e.n}</span><span class="l-en">${good ? 'Good example' : 'Bad example'} ${e.n}</span></span>
+        <div class="ptxt"><p lang="en"></p><p lang="ko"></p></div>
+        <div class="plegend"><mark class="sa"><span class="l-ko">시작 상태</span><span class="l-en">Start state</span></mark><mark class="sb"><span class="l-ko">목표 상태</span><span class="l-en">Target state</span></mark></div>
+        <div class="exvids">
+          <div class="refcol"><div class="vlab"><b><span class="l-ko">기준 영상</span><span class="l-en">Reference</span></b></div><div class="stage"></div>${CTL_HTML}</div>
+          <div class="refcol"><div class="vlab"><b><span class="l-ko">예시 영상</span><span class="l-en">Example video</span></b></div><div class="stage"></div>${CTL_HTML}</div>
+          <div class="excap"><p></p><p class="arrow"></p></div>
+        </div>`;
+      const [pe, pk] = art.querySelectorAll('.ptxt p'); pe.append(hl(e.prompt, e.pa, e.pb)); pk.append(hl(e.ko || '', e.ka, e.kb));
+      const [c1, c2] = art.querySelectorAll('.excap p');
+      c1.append(txt('l-ko', e.cap[0]), txt('l-en', e.cap[1])); c2.append(txt('l-ko', '→ ' + e.hint[0]), txt('l-en', '→ ' + e.hint[1]));
+      c2.hidden = !e.hint[0];
+      art.querySelectorAll('.stage').forEach(s => s.style.setProperty('--ar', `${e.w} / ${e.h}`));
+      $(good ? 'exGood' : 'exBad').append(art);
+      exRows.push({e, art, ref: null, ex: null, on: true, vis: false, scrub: false});
+    });
+    $('exGood').hidden = !EXAMPLES.some(e => e.kind === 'good'); $('exBad').hidden = !EXAMPLES.some(e => e.kind === 'bad');
+  }
+  function exVideo(src, slot){
+    const v = document.createElement('video');
+    v.muted = true; v.defaultMuted = true; v.playsInline = true; v.loop = true; v.preload = 'auto';
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+    v.disablePictureInPicture = true; v.disableRemotePlayback = true; v.src = src;
+    slot.replaceChildren(v, cover());
+    v.addEventListener('loadeddata', () => uncover(v), {once: true});
+    return v;
+  }
+  function exPlay(r){
+    if (!r.ref || !r.on || !r.vis || r.scrub) return;
+    try { if (Math.abs(r.ex.currentTime - r.ref.currentTime) > 0.12) r.ex.currentTime = r.ref.currentTime; } catch (e) {}
+    [r.ref, r.ex].forEach(v => { const p = v.play(); if (p && p.catch) p.catch(() => {}); });
+  }
+  function exPause(r){ [r.ref, r.ex].forEach(v => { if (v) { try { v.pause(); } catch (e) {} } }); }
+  function exStart(){                              // call from a tap (Start / Back) so phones load the first row right away
+    exStop();
+    exRows.forEach((r, i) => {
+      const [s1, s2] = r.art.querySelectorAll('.stage');
+      r.ref = exVideo(r.e.ref, s1); r.ex = exVideo(r.e.ex, s2); r.on = true; r.vis = false; r.scrub = false;
+      if (i === 0) [r.ref, r.ex].forEach(warm);
+    });
+    if ('IntersectionObserver' in window) {
+      exObs = new IntersectionObserver(ents => ents.forEach(en => {
+        const r = exRows.find(x => x.art === en.target); if (!r) return;
+        r.vis = en.isIntersecting; if (r.vis) exPlay(r); else exPause(r);
+      }), {threshold: 0.35});
+      exRows.forEach(r => exObs.observe(r.art));
+    } else exRows.forEach(r => { r.vis = true; exPlay(r); });
+    paintExCtl();
+  }
+  function exStop(){
+    if (exObs) { exObs.disconnect(); exObs = null; }
+    exRows.forEach(r => { [r.ref, r.ex].forEach(v => { if (v) { try { v.pause(); } catch (e) {} v.removeAttribute('src'); v.load(); v.remove(); } }); r.ref = r.ex = null; });
+  }
+  function paintExCtl(){ exRows.forEach(r => r.art.querySelectorAll('.ctl .pp').forEach(b => { b.textContent = r.on ? '❚❚' : '▶'; b.setAttribute('aria-label', r.on ? T('pause') : T('play')); })); }
+  function exTick(){
+    for (const r of exRows) {
+      if (!r.ref) continue;
+      const t = r.ref.currentTime || 0, d = isFinite(r.ref.duration) && r.ref.duration > 0 ? r.ref.duration : 5.04, label = `${t.toFixed(1)} / ${d.toFixed(1)} s`;
+      r.art.querySelectorAll('.ctl').forEach(c => {
+        const s = c.querySelector('.seek'), m = c.querySelector('.tm');
+        if (s.max !== String(d)) s.max = String(d);
+        if (!r.scrub) s.value = String(t);
+        if (m.textContent !== label) m.textContent = label;
+      });
+      if (r.on && r.vis && !r.scrub && !r.ex.paused && Math.abs(r.ex.currentTime - t) > 0.15) { try { r.ex.currentTime = t; } catch (e) {} }
+    }
+  }
+  function exRowOf(el){ const art = el.closest && el.closest('.exrow'); return art ? exRows.find(x => x.art === art) : null; }
+  function showExamples(){ pauseAll(); show('examples'); exStart(); }
 
   async function showTrial(){
     const q = S.seq[S.idx], ti = q.i, t = TRIALS[ti], xLeft = xLeftAt(S, S.idx), myS = S, myIdx = S.idx;
@@ -465,7 +601,7 @@ function newState(rnd, layout){
     const l = sideDone('L'), r = sideDone('R');
     $('tickL').textContent = l ? '✓' : ''; $('tickR').textContent = r ? '✓' : '';
     $('nextBtn').disabled = !(l && r);
-    $('backBtn').disabled = S.idx === 0;
+    $('backBtn').disabled = S.idx === 0 && !EXAMPLES.length;      // from the first trial, Back returns to the examples
     $('hint').textContent = blocked ? T('blocked') : (l && r) ? '' : (!l && !r) ? T('both') : !l ? T('needA') : T('needB');
   }
   function addTime(){ if (S && !S.done && tStart && !$('trial').hidden) { S.tms[S.idx] = (S.tms[S.idx] || 0) + (Date.now() - tStart); tStart = Date.now(); store.set(S); } }
@@ -478,25 +614,51 @@ function newState(rnd, layout){
     showTrial(); kick();
   }
 
+  /* optional name + phone for the coffee draw: kept in sessionStorage (this tab only) and pre-filled into the form as "name, phone" */
+  const CKEY = 'us061_contact';
+  function getContact(){ try { const c = JSON.parse(sessionStorage.getItem(CKEY) || 'null'); return c && typeof c === 'object' ? c : {}; } catch (e) { return {}; } }
+  function saveContact(){
+    const c = {n: $('cName').value.trim(), p: $('cPhone').value.trim()};
+    try { if (c.n || c.p) sessionStorage.setItem(CKEY, JSON.stringify(c)); else sessionStorage.removeItem(CKEY); } catch (e) {}
+  }
+  function clearContact(){ try { sessionStorage.removeItem(CKEY); } catch (e) {} $('cName').value = ''; $('cPhone').value = ''; }
+
   function showDone(){
     pool.forEach(v => { v.removeAttribute('src'); v.load(); }); pool.clear(); vids = [];
     $('codeBox').textContent = encodeCode(S);
+    const c = getContact(), who = [c.n, c.p].filter(Boolean).join(', ');
     if (FORM_URL) {
-      $('formLink').href = FORM_ENTRY ? `${FORM_URL}?usp=pp_url&${FORM_ENTRY}=${encodeURIComponent($('codeBox').textContent)}` : FORM_URL;
+      let href = FORM_ENTRY ? `${FORM_URL}?usp=pp_url&${FORM_ENTRY}=${encodeURIComponent($('codeBox').textContent)}` : FORM_URL;
+      if (FORM_ENTRY && FORM_CONTACT && who) href += `&${FORM_CONTACT}=${encodeURIComponent(who)}`;
+      $('formLink').href = href;
       $('formRow').hidden = false; $('formMissing').hidden = true;
     } else { $('formRow').hidden = true; $('formMissing').hidden = false; }
+    const auto = !!(FORM_URL && FORM_ENTRY && FORM_CONTACT && who);
+    $('raffleAuto').hidden = !auto; $('raffleManual').hidden = auto;
     show('done');
   }
 
-  function showIntro(){ paintStart(); show('intro'); }
+  function showIntro(){ exStop(); paintStart(); show('intro'); }
 
   document.addEventListener('input', e => {
     const s = e.target;
-    if (!s.classList || !s.classList.contains('seek') || !vids.length) return;
+    if (!s.classList || !s.classList.contains('seek')) return;
+    const r = exRowOf(s);
+    if (r) {                                        // an example row: both of its videos follow the bar
+      if (!r.ref) return;
+      r.scrub = true; exPause(r);
+      [r.ref, r.ex].forEach(v => { try { v.currentTime = +s.value; } catch (err) {} });
+      r.art.querySelectorAll('.ctl .seek').forEach(o => { if (o !== s) o.value = s.value; });
+      return;
+    }
+    if (!s.closest('#trial') || !vids.length) return;
     scrubbing = true; pauseAll(); seekAll(+s.value);
-    document.querySelectorAll('.ctl .seek').forEach(o => { if (o !== s) o.value = s.value; });
+    document.querySelectorAll('#trial .ctl .seek').forEach(o => { if (o !== s) o.value = s.value; });
   });
-  const endScrub = () => { if (!scrubbing) return; scrubbing = false; if (playing) playActive(); };
+  const endScrub = () => {
+    exRows.forEach(r => { if (r.scrub) { r.scrub = false; exPlay(r); } });
+    if (!scrubbing) return; scrubbing = false; if (playing) playActive();
+  };
   document.addEventListener('change', e => {
     const el = e.target;
     if (el.classList && el.classList.contains('seek')) { endScrub(); return; }
@@ -506,15 +668,29 @@ function newState(rnd, layout){
   });
   document.addEventListener('pointerup', endScrub);
   document.addEventListener('touchend', endScrub);
-  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.ctl .pp') && vids.length) setPlaying(!playing); });
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.ctl .pp'); if (!b) return;
+    const r = exRowOf(b);
+    if (r) { r.on = !r.on; if (r.on) exPlay(r); else exPause(r); paintExCtl(); return; }
+    if (b.closest('#trial') && vids.length) setPlaying(!playing);
+  });
   $('langKo').addEventListener('click', () => setLang('ko'));
   $('langEn').addEventListener('click', () => setLang('en'));
+  $('cName').addEventListener('input', saveContact);
+  $('cPhone').addEventListener('input', saveContact);
   $('startBtn').addEventListener('click', () => {
     if (!S) { S = newState(rnd, phone.matches ? 'm' : 'd'); store.set(S); }
+    if (EXAMPLES.length && !S.ex && S.idx === 0) { showExamples(); return; }   // examples once, before the first trial
     showTrial(); kick();
   });
+  $('exGo').addEventListener('click', () => { exStop(); S.ex = 1; store.set(S); showTrial(); kick(); });
+  $('exBack').addEventListener('click', () => { showIntro(); });
   $('nextBtn').addEventListener('click', () => { if (!$('nextBtn').disabled) go(1); });
-  $('backBtn').addEventListener('click', () => { if (S && S.idx > 0) go(-1); });
+  $('backBtn').addEventListener('click', () => {
+    if (!S) return;
+    if (S.idx > 0) { go(-1); return; }
+    if (EXAMPLES.length) { addTime(); pauseAll(); tStart = 0; store.set(S); showExamples(); }
+  });
   $('tabL').addEventListener('click', () => { switchTo('L'); });
   $('tabR').addEventListener('click', () => { switchTo('R'); });
   $('goB').addEventListener('click', () => {
@@ -543,11 +719,13 @@ function newState(rnd, layout){
   }
   function hashReset(){                            // testers: open the link with #reset to start over
     if (location.hash !== '#reset') return false;
-    store.clear(); S = null; pauseAll(); vids = [];
+    store.clear(); S = null; pauseAll(); vids = []; clearContact();
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
     showIntro(); return true;
   }
   window.addEventListener('hashchange', hashReset);
+  exInit();
+  { const c = getContact(); $('cName').value = c.n || ''; $('cPhone').value = c.p || ''; }
   let saved = null; try { saved = localStorage.getItem(LANG_KEY); } catch (e) {}
   setLang(saved === 'en' ? 'en' : 'ko');            // Korean unless this viewer chose English before
   if (!hashReset()) { if (S && S.done) showDone(); else showIntro(); }
